@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f2efe9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Altın">
+<title>Altın Panosu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  :root{
+    --bg:#f2efe9; --surface:#ffffff; --surface-2:#faf7f2;
+    --ink:#1d1a14; --ink-2:#57503f; --muted:#8b8171; --line:#e2dccf;
+    --acc:#9a6a10; --acc-soft:#f2e6cd; --acc-ink:#7a5308;
+    --up:#2c7a4b; --up-soft:#dcefe3; --down:#a83228; --down-soft:#f7e2df;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark){ :root{
+    --bg:#15120d; --surface:#1d1912; --surface-2:#231e16;
+    --ink:#f0eadd; --ink-2:#bcb19b; --muted:#8b8171; --line:#2f2819;
+    --acc:#d9a441; --acc-soft:#2c2415; --acc-ink:#e8c37a;
+    --up:#6cc48c; --up-soft:#15291c; --down:#e8877b; --down-soft:#2e1a17;
+    color-scheme:dark;
+  }}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Source Sans 3",system-ui,-apple-system,sans-serif;
+       font-size:15px;line-height:1.5;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .wrap{max-width:720px;margin:0 auto;padding-block:0 40px;padding-left:16px;padding-right:16px}
+  h1,h2{font-family:Archivo,system-ui,sans-serif;margin:0;text-wrap:balance}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+  header.top{padding-block:16px 12px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px}
+  header.top .g{flex:1 1 auto;min-width:0}
+  h1{font-size:23px;font-weight:700;letter-spacing:-.015em;margin-top:2px}
+  .tazelik{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .tazelik.canli{color:var(--up);font-weight:600}
+  .tazelik.eski{color:var(--down)}
+  button.yenile{flex:0 0 auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;
+    padding:8px 12px;font:inherit;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer}
+  button.yenile[data-yukleniyor="1"]{opacity:.5}
+
+  .hero{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+  .hero .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+  .hero .kz{font-family:"IBM Plex Mono",monospace;font-size:36px;font-weight:700;line-height:1.1;margin-top:4px}
+  .hero .pct{font-size:16px;font-weight:600;margin-top:2px}
+  .hero .alt{font-size:13px;color:var(--ink-2);margin-top:8px}
+  .up{color:var(--up)} .down{color:var(--down)}
+
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-top:12px}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .tile .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .tile .v{font-family:"IBM Plex Mono",monospace;font-size:18px;font-weight:600;margin-top:3px}
+  .tile .s{font-size:12px;color:var(--muted)}
+
+  section{margin-top:22px}
+  .shead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+  .shead h2{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .seg{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px}
+  .seg button{border:0;background:none;border-radius:999px;padding:5px 13px;font-size:12.5px;font-weight:600;
+    color:var(--muted);cursor:pointer;font-family:inherit}
+  .seg button[aria-pressed="true"]{background:var(--acc-soft);color:var(--acc-ink)}
+  svg text{font-family:"IBM Plex Mono",monospace}
+
+  .bar{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13.5px}
+  .bar .ad{flex:0 0 112px;color:var(--ink-2)}
+  .bar .tr{flex:1 1 auto;height:9px;border-radius:5px;background:var(--surface-2);overflow:hidden}
+  .bar .tr i{display:block;height:100%;border-radius:5px}
+  .bar .dg{flex:0 0 100px;text-align:right;font-family:"IBM Plex Mono",monospace;font-weight:600}
+
+  table.islem{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.islem th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:4px 6px;font-weight:600}
+  table.islem td{padding:9px 6px;border-top:1px solid var(--line)}
+  table.islem td.num{text-align:right;font-family:"IBM Plex Mono",monospace}
+  .tur{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--acc-soft);color:var(--acc-ink)}
+  .tur.satim{background:var(--down-soft);color:var(--down)}
+
+  form{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  input,select,button{font:inherit;color:inherit}
+  input,select{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 11px;width:100%;min-width:0}
+  .f{flex:1 1 120px} .f-s{flex:0 0 132px}
+  button.go{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:10px 18px;font-weight:600;cursor:pointer}
+  .x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:16px;padding:4px 8px}
+  :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  .empty{color:var(--muted);font-size:13.5px;padding:10px 0}
+  .uyari{background:var(--down-soft);border-left:4px solid var(--down);border-radius:12px;padding:12px 14px;margin-top:14px;font-size:13.5px}
+  footer{margin-top:26px;text-align:center;font-size:11.5px;color:var(--muted);line-height:1.7}
+  footer b{color:var(--ink-2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="g">
+      <div class="eyebrow">Adım Adım · Finans</div>
+      <h1>Altın Panosu</h1>
+      <div class="tazelik" id="tazelik">fiyat alınıyor…</div>
+    </div>
+    <button class="yenile" id="yenile" type="button">Yenile</button>
+  </header>
+
+  <div id="uyari"></div>
+
+  <div class="hero">
+    <div class="k">Toplam kâr / zarar</div>
+    <div class="kz" id="kz">—</div>
+    <div class="pct" id="pct">—</div>
+    <div class="alt" id="alt">—</div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section>
+    <div class="shead"><h2>Fiyat geçmişi</h2>
+      <div class="seg" id="aralik" role="group" aria-label="Aralık">
+        <button type="button" data-g="7" aria-pressed="true">7 gün</button>
+        <button type="button" data-g="30" aria-pressed="false">30 gün</button>
+        <button type="button" data-g="400" aria-pressed="false">Tümü</button>
+      </div>
+    </div>
+    <div class="panel"><div id="grafik"></div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:6px">
+        IAR bozdurma fiyatı (gram). Kesikli çizgi ortalama maliyetin.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="shead"><h2>Kâr nereden geldi</h2></div>
+    <div class="panel" id="kaynak"></div>
+  </section>
+
+  <section>
+    <div class="shead"><h2>Karşılaştırma</h2><div style="font-size:12.5px;color:var(--muted)">bugünkü değerler</div></div>
+    <div class="panel" id="kiyas"></div>
+  </section>
+
+  <section>
+    <div class="shead"><h2>İşlemler</h2><div style="font-size:12.5px;color:var(--muted)" id="islem-meta"></div></div>
+    <div class="panel">
+      <table class="islem"><thead><tr>
+        <th>Tarih</th><th>Tür</th><th style="text-align:right">Gram</th><th style="text-align:right">Fiyat</th><th></th>
+      </tr></thead><tbody id="islemler"></tbody></table>
+      <form id="islem-form">
+        <div class="f-s"><input type="date" id="i-tarih" aria-label="Tarih" required></div>
+        <div class="f-s"><select id="i-tur" aria-label="Tür"><option value="alim">Alım</option><option value="satim">Satım</option></select></div>
+        <div class="f"><input type="number" id="i-gram" step="0.01" min="0.01" placeholder="Gram" required></div>
+        <div class="f"><input type="number" id="i-fiyat" step="0.01" min="1" placeholder="Gram fiyatı (TL)" required></div>
+        <button class="go" type="submit">Ekle</button>
+      </form>
+    </div>
+  </section>
+
+  <footer>
+    Fiyat IAR Platform'un açık veri servisinden 15 dakikada bir tazelenir; hesap telefonunda yapılır.<br>
+    <b>Portföyün yalnızca bu telefonda saklanır</b>, hiçbir sunucuya gönderilmez.<br>
+    Kâr/zarar bozdurma fiyatıyla. Bilgilendirme amaçlıdır, yatırım tavsiyesi değildir.
+  </footer>
+</div>
+
+<script>
+const FIYAT = "fiyat.json";   // GitHub Actions 15 dakikada bir IAR'dan tazeler
+const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+const tl = (v,i) => (v<0?"-":i?"+":"") + Math.abs(v).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2}) + " TL";
+const usdF = (v,i) => (v<0?"-":i?"+":"") + "$" + Math.abs(v).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const yzd = v => (v>=0?"+":"−") + Math.abs(v).toFixed(2).replace(".",",") + "%";
+const binlik = v => Math.round(v).toLocaleString("tr-TR");
+const kisaT = t => `${+t.slice(8)} ${AY[+t.slice(5,7)-1]}`;
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const bugunIso = iso(new Date());
+const esc = s => String(s ?? "").replace(/[<>&"]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
+
+const kaydet = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} };
+const yukle = (k,v) => { try{ return JSON.parse(localStorage.getItem(k)) ?? v; }catch{ return v; } };
+
+let islemler = yukle("altin_islemler", []);
+let gecmis = yukle("altin_gecmis", []);          // {t,a,o,k}
+let enflasyon = yukle("altin_enflasyon", {});
+let fiyat = yukle("altin_fiyat", null);          // {alis,satis,ons,kur,zaman}
+let aralik = 7;
+
+/* baglantidaki #v=... ile ilk kurulum (veri sunucuya gitmez, adres parcasi tarayicida kalir) */
+(function ilkKurulum(){
+  if (!location.hash.startsWith("#v=")) return;
+  try {
+    const gelen = JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(3)))));
+    if (Array.isArray(gelen) && gelen.length && !islemler.length) { islemler = gelen; kaydet("altin_islemler", islemler); }
+  } catch {}
+  history.replaceState(null, "", location.pathname);
+})();
+
+/* --- hesaplar -------------------------------------------------------- */
+function lotlar(){
+  const lot = [];
+  [...islemler].sort((a,b) => a.tarih < b.tarih ? -1 : 1).forEach(i => {
+    if (i.tur === "satim") {
+      const toplam = lot.reduce((a,l) => a + l.gram, 0);
+      const oran = toplam ? 1 - i.gram / toplam : 0;
+      lot.forEach(l => { l.gram *= oran; l.maliyet *= oran; });
+    } else lot.push({tarih: i.tarih, gram: +i.gram, maliyet: i.gram * i.birim_fiyat_tl});
+  });
+  return lot.filter(l => l.gram > 1e-9);
+}
+const gunSatiri = t => { const a = gecmis.filter(g => g.t <= t); return a.length ? a[a.length-1] : gecmis[0]; };
+
+function enflasyonCarpani(bas, bit){
+  let c = 1, d = new Date(bas + "T00:00:00"), son = Object.keys(enflasyon).sort().pop();
+  const bitD = new Date(bit + "T00:00:00");
+  while (d < bitD) {
+    const ay = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+    const oran = (enflasyon[ay] ?? (son ? enflasyon[son] : 0)) / 100;
+    const gunSayisi = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+    c *= Math.pow(1 + oran, 1 / gunSayisi);
+    d.setDate(d.getDate() + 1);
+  }
+  return c;
+}
+
+function hesapla(){
+  const lot = lotlar();
+  const gram = lot.reduce((a,l) => a + l.gram, 0), maliyet = lot.reduce((a,l) => a + l.maliyet, 0);
+  const alis = fiyat ? fiyat.alis : 0;
+  const deger = gram * alis, kz = deger - maliyet;
+  let maliyetUsd = 0, enfGerekli = 0, ons = 0, kur = 0;
+  lot.forEach(l => {
+    const s0 = gunSatiri(l.tarih);
+    if (!s0 || !fiyat) return;
+    const a = fiyat.ons / s0.o, b = fiyat.kur / s0.k;
+    maliyetUsd += l.maliyet / s0.k;
+    enfGerekli += l.maliyet * enflasyonCarpani(l.tarih, bugunIso);
+    ons += l.maliyet * (a - 1) * (1 + b) / 2;
+    kur += l.maliyet * (b - 1) * (1 + a) / 2;
+  });
+  return {gram, maliyet, deger, kz, ort: gram ? maliyet/gram : 0, yuzde: maliyet ? kz/maliyet*100 : 0,
+          maliyetUsd, enfGerekli, ons, kur, makas: kz - ons - kur};
+}
+
+/* --- ciz -------------------------------------------------------------- */
+function render(){
+  const d = hesapla(), yon = d.kz >= 0 ? "up" : "down";
+  document.getElementById("kz").className = "kz " + yon;
+  document.getElementById("kz").textContent = d.gram ? (d.kz >= 0 ? "▲ " : "▼ ") + tl(d.kz, true) : "—";
+  document.getElementById("pct").className = "pct " + yon;
+  document.getElementById("pct").textContent = d.gram ? yzd(d.yuzde) : "işlem ekleyince hesaplanır";
+  document.getElementById("alt").textContent = d.gram
+    ? `${d.gram.toLocaleString("tr-TR")} gram · ortalama maliyet ${tl(d.ort)} / gram` : "Aşağıdan ilk alımını ekle.";
+
+  const kzUsd = fiyat && d.gram ? d.deger / fiyat.kur - d.maliyetUsd : 0;
+  const reel = d.enfGerekli ? (d.deger / d.enfGerekli - 1) * 100 : 0;
+  document.getElementById("tiles").innerHTML = [
+    {k:"Güncel değer", v: d.gram ? tl(d.deger) : "—", s: fiyat ? `${d.gram} gr × ${tl(fiyat.alis)}` : ""},
+    {k:"Maliyet", v: d.gram ? tl(d.maliyet) : "—", s: d.gram ? `ort. ${tl(d.ort)} / gr` : ""},
+    {k:"Dolar bazında", v: d.gram ? usdF(kzUsd, true) : "—", s: fiyat ? `kur ${fiyat.kur.toFixed(2).replace(".",",")}` : "", c: kzUsd >= 0 ? "up" : "down"},
+    {k:"Reel getiri", v: d.enfGerekli ? yzd(reel) : "—", s:"enflasyondan arındırılmış", c: reel >= 0 ? "up" : "down"},
+    {k:"Gram alış", v: fiyat ? tl(fiyat.alis) : "—", s:"bozdurma fiyatı"},
+    {k:"Gram satış", v: fiyat ? tl(fiyat.satis) : "—", s:"alırken ödenen"}
+  ].map(t => `<div class="tile"><div class="k">${t.k}</div><div class="v ${t.c||""}">${t.v}</div><div class="s">${t.s}</div></div>`).join("");
+
+  grafik(d);
+
+  const enb = Math.max(Math.abs(d.ons), Math.abs(d.kur), Math.abs(d.makas), 1);
+  document.getElementById("kaynak").innerHTML = d.gram ? [["Altının onsu", d.ons],["Dolar/TL kuru", d.kur],["Alış-satış makası", d.makas]]
+    .map(([ad,v]) => `<div class="bar"><span class="ad">${ad}</span>
+      <span class="tr"><i style="width:${Math.max(3, Math.abs(v)/enb*100)}%;background:var(--${v>=0?"up":"down"})"></i></span>
+      <span class="dg ${v>=0?"up":"down"}">${tl(v, true)}</span></div>`).join("")
+    : `<div class="empty">İşlem ekleyince burada kârın kaynağını göreceksin.</div>`;
+
+  const dolar = fiyat ? d.maliyetUsd * fiyat.kur : 0;
+  document.getElementById("kiyas").innerHTML = d.gram ? [
+    ["Altın (seninki)", d.deger, "IAR bozdurma fiyatıyla"],
+    ["Dolar tutsaydın", dolar, "alım günü dolara çevrilseydi"],
+    ["Enflasyonu yakalamak için", d.enfGerekli, "alım gücünü korumak için gereken"]
+  ].map(([ad,v,s]) => {
+    const fark = v - d.maliyet;
+    return `<div class="bar" style="align-items:flex-start"><span class="ad" style="flex:1 1 auto">${ad}
+      <div style="font-size:11.5px;color:var(--muted)">${s}</div></span>
+      <span class="dg" style="flex:0 0 118px">${tl(v)}<div style="font-size:12px;font-weight:600" class="${fark>=0?"up":"down"}">${tl(fark, true)}</div></span></div>`;
+  }).join("") : `<div class="empty">İşlem ekleyince dolar ve enflasyonla karşılaştırırım.</div>`;
+
+  const liste = [...islemler].sort((a,b) => a.tarih < b.tarih ? 1 : -1);
+  document.getElementById("islem-meta").textContent = liste.length ? liste.length + " işlem" : "";
+  document.getElementById("islemler").innerHTML = liste.length ? liste.map((i,ix) => `<tr>
+    <td>${kisaT(i.tarih)}</td>
+    <td><span class="tur ${i.tur === "satim" ? "satim" : ""}">${i.tur === "satim" ? "Satım" : "Alım"}</span></td>
+    <td class="num">${(+i.gram).toLocaleString("tr-TR")}</td>
+    <td class="num">${tl(i.birim_fiyat_tl)}</td>
+    <td style="text-align:right"><button class="x" data-sil="${esc(i.id || ix)}" aria-label="Sil">×</button></td></tr>`).join("")
+    : `<tr><td colspan="5" class="empty">Henüz işlem yok.</td></tr>`;
+}
+
+function grafik(d){
+  const veri = gecmis.slice(-aralik);
+  const el = document.getElementById("grafik");
+  if (veri.length < 2) { el.innerHTML = `<div class="empty">Fiyat geçmişi yükleniyor…</div>`; return; }
+  const W = 640, H = 180, L = 16, R = 16, T = 20, B = 26;
+  const xs = veri.map((_,i) => L + i * (W-L-R) / (veri.length-1));
+  const hep = [...veri.map(v => v.a), ...(d.ort ? [d.ort] : [])];
+  const lo = Math.min(...hep), hi = Math.max(...hep), pad = (hi-lo)*.25 || 50;
+  const y = v => T + (H-T-B) * (1 - (v - (lo-pad)) / ((hi+pad) - (lo-pad)));
+  const cizgi = veri.map((v,i) => `${i?"L":"M"}${xs[i].toFixed(1)},${y(v.a).toFixed(1)}`).join(" ");
+  const enbV = Math.max(...veri.map(v => v.a)), endV = Math.min(...veri.map(v => v.a));
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="Altın fiyat geçmişi">
+    <path d="${cizgi} L${xs[xs.length-1].toFixed(1)},${H-B} L${xs[0].toFixed(1)},${H-B} Z" fill="var(--acc-soft)" opacity=".55"></path>
+    ${d.ort ? `<line x1="${L}" y1="${y(d.ort).toFixed(1)}" x2="${W-R}" y2="${y(d.ort).toFixed(1)}" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="4 3"></line>
+      <text x="${W-R}" y="${(y(d.ort)-6).toFixed(1)}" text-anchor="end" font-size="10.5" fill="var(--ink-2)">maliyetin ${binlik(d.ort)}</text>` : ""}
+    <path d="${cizgi}" fill="none" stroke="var(--acc)" stroke-width="2.2" stroke-linejoin="round"></path>
+    ${veri.map((v,i) => (v.a === enbV || v.a === endV || i === veri.length-1)
+      ? `<circle cx="${xs[i].toFixed(1)}" cy="${y(v.a).toFixed(1)}" r="${i === veri.length-1 ? 4.5 : 3}" fill="var(--acc)" stroke="var(--surface)" stroke-width="1.5"></circle>
+         <text x="${xs[i].toFixed(1)}" y="${(y(v.a)-9).toFixed(1)}" text-anchor="${i === veri.length-1 ? "end" : i === 0 ? "start" : "middle"}" font-size="11" fill="var(--ink-2)">${binlik(v.a)}</text>` : "").join("")}
+    ${veri.map((v,i) => (i % Math.ceil(veri.length/5) === 0 || i === veri.length-1)
+      ? `<text x="${xs[i].toFixed(1)}" y="${H-8}" text-anchor="${i === veri.length-1 ? "end" : i === 0 ? "start" : "middle"}" font-size="10.5" fill="var(--muted)">${kisaT(v.t)}</text>` : "").join("")}
+  </svg>`;
+}
+
+/* --- veri cekme -------------------------------------------------------- */
+async function fiyatCek(){
+  const btn = document.getElementById("yenile");
+  btn.dataset.yukleniyor = "1";
+  try {
+    const r = await fetch(FIYAT + "?t=" + Date.now(), {cache: "no-store"});
+    if (!r.ok) throw new Error("servis " + r.status);
+    const d = await r.json();
+    if (!d.alis || !d.ons || !d.kur) throw new Error("fiyat bulunamadı");
+    fiyat = {alis: d.alis, satis: d.satis, ons: d.ons, kur: d.kur, zaman: d.zaman};
+    kaydet("altin_fiyat", fiyat);
+    const son = gecmis[gecmis.length-1];
+    const satir = {t: bugunIso, a: +fiyat.alis.toFixed(2), o: +fiyat.ons.toFixed(2), k: +fiyat.kur.toFixed(4), s: "IAR"};
+    if (son && son.t === bugunIso) gecmis[gecmis.length-1] = satir; else gecmis.push(satir);
+    kaydet("altin_gecmis", gecmis);
+    document.getElementById("uyari").innerHTML = "";
+    tazelikYaz(true);
+  } catch (e) {
+    tazelikYaz(false);
+    document.getElementById("uyari").innerHTML =
+      `<div class="uyari"><b>Güncel fiyat alınamadı.</b><br>Son bilinen fiyatla hesaplandı. İnternet bağlantını kontrol edip Yenile'ye bas.</div>`;
+  }
+  btn.dataset.yukleniyor = "0";
+  render();
+}
+
+function tazelikYaz(canli){
+  const el = document.getElementById("tazelik");
+  if (!fiyat) { el.textContent = "fiyat alınamadı"; el.className = "tazelik eski"; return; }
+  const dk = Math.round((Date.now() - new Date(fiyat.zaman)) / 6e4);
+  const z = new Date(fiyat.zaman);
+  el.textContent = canli && dk < 20 ? `canlı fiyat · ${dk < 1 ? "az önce" : dk + " dk önce"} güncellendi`
+    : `fiyat ${z.getDate()} ${AY[z.getMonth()]} ${String(z.getHours()).padStart(2,"0")}:${String(z.getMinutes()).padStart(2,"0")} itibarıyla`;
+  el.className = "tazelik" + (canli && dk < 20 ? " canli" : dk > 1440 ? " eski" : "");
+}
+
+async function veriYukle(){
+  try {
+    const [g, e] = await Promise.all([
+      fetch("fiyat_gecmisi.json", {cache:"no-cache"}).then(r => r.json()),
+      fetch("enflasyon.json", {cache:"no-cache"}).then(r => r.json())
+    ]);
+    const yerel = new Map(gecmis.map(x => [x.t, x]));
+    g.gunler.forEach(x => { if (!yerel.has(x.t) || yerel.get(x.t).s !== "canli") yerel.set(x.t, x); });
+    gecmis = [...yerel.values()].sort((a,b) => a.t < b.t ? -1 : 1);
+    enflasyon = e.aylik; kaydet("altin_gecmis", gecmis); kaydet("altin_enflasyon", enflasyon);
+  } catch {}
+}
+
+/* --- olaylar ----------------------------------------------------------- */
+document.getElementById("aralik").addEventListener("click", e => {
+  const b = e.target.closest("button[data-g]");
+  if (!b) return;
+  aralik = +b.dataset.g;
+  document.querySelectorAll("#aralik button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  grafik(hesapla());
+});
+document.getElementById("yenile").addEventListener("click", fiyatCek);
+document.getElementById("i-tarih").value = bugunIso;
+
+document.getElementById("islem-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const k = {id: Date.now().toString(36), tarih: document.getElementById("i-tarih").value,
+             tur: document.getElementById("i-tur").value,
+             gram: +document.getElementById("i-gram").value,
+             birim_fiyat_tl: +document.getElementById("i-fiyat").value};
+  if (!k.tarih || !k.gram || !k.birim_fiyat_tl) return;
+  islemler.push(k); kaydet("altin_islemler", islemler);
+  document.getElementById("i-gram").value = ""; document.getElementById("i-fiyat").value = "";
+  render();
+});
+
+document.getElementById("islemler").addEventListener("click", e => {
+  const s = e.target.closest("[data-sil]");
+  if (!s) return;
+  const id = s.dataset.sil;
+  islemler = islemler.filter((i,ix) => String(i.id ?? ix) !== id);
+  kaydet("altin_islemler", islemler); render();
+});
+
+document.addEventListener("visibilitychange", () => { if (!document.hidden) fiyatCek(); });
+
+render();
+veriYukle().then(fiyatCek);
+</script>
+</body>
+</html>

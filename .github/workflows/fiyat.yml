@@ -1,0 +1,33 @@
+name: Fiyat tazele
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # 15 dakikada bir
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fiyat
+  cancel-in-progress: true
+
+jobs:
+  tazele:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: IAR fiyatini cek
+        run: |
+          for i in 1 2 3; do python fiyat_cek.py && exit 0; echo "Deneme $i basarisiz"; [ $i -lt 3 ] && sleep 30; done
+          exit 1
+      - name: Yayimla
+        run: |
+          git config user.name "altin-pano-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add fiyat.json fiyat_gecmisi.json
+          git diff --cached --quiet || (git commit -m "Fiyat: $(TZ=Europe/Istanbul date +'%F %H:%M')" && git push)
