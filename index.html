@@ -223,6 +223,7 @@
       </div>
       <div class="dagilim" id="dagilim"></div>
       <div id="c-grafik" style="margin-top:14px"></div>
+      <div id="c-kayitlar"></div>
     </div>
   </section>
 
@@ -533,6 +534,18 @@ function mCalisma(){
   document.getElementById("hedef-v").textContent = sureMetni(hedefDk);
   document.getElementById("c-meta").textContent = `hedef ${sureMetni(hedefDk)} · bu hafta ${sureMetni(toplam)}`;
 
+  const son = calisma.slice(-8).reverse();
+  document.getElementById("c-kayitlar").innerHTML = son.length
+    ? `<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:8px">
+        <div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600">Son kayıtlar</div>` +
+      son.map((c,i) => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13.5px;border-bottom:1px solid var(--line)">
+          <span style="flex:0 0 52px;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:12.5px">${c.tarih === bugunIso ? (c.saat || "bugün") : c.tarih.slice(8)+"."+c.tarih.slice(5,7)}</span>
+          <span style="flex:1 1 auto">${esc(c.ders || "Diğer")}</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-weight:600">${sureMetni(c.dk || 0)}</span>
+          <button class="x" data-csil="${esc(c.id ?? ("ix" + (calisma.length - 1 - i)))}" aria-label="Bu kaydı sil">×</button>
+        </div>`).join("") + `</div>`
+    : "";
+
   const enb = Math.max(60, ...gunler.map(x => x.dk)), W = 320, H = 104, bw = 26, bos = (W - 7*bw)/6;
   document.getElementById("c-grafik").innerHTML =
     `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="Son yedi günün çalışma süresi">
@@ -605,12 +618,22 @@ document.getElementById("sayac-iptal").addEventListener("click", () => {
   clearInterval(tik); sayac = null; try{ localStorage.removeItem("m_sayac"); }catch{} sayacYaz();
 });
 function calismaEkle(ders, dk){
-  calisma.push({tarih: bugunIso, ders, dk}); kaydet("m_calisma", calisma); senkYaz("calisma"); mCalisma();
+  calisma.push({id: Date.now().toString(36), tarih: bugunIso, ders, dk, saat: new Date().toTimeString().slice(0,5)}); kaydet("m_calisma", calisma); senkYaz("calisma"); mCalisma();
 }
 document.getElementById("c-dk").addEventListener("click", e => {
   const b = e.target.closest("button[data-dk]");
   if (b) calismaEkle(document.getElementById("c-ders").value, +b.dataset.dk);
 });
+document.getElementById("c-kayitlar").addEventListener("click", e => {
+  const b = e.target.closest("[data-csil]");
+  if (!b) return;
+  const k = b.dataset.csil;
+  calisma = k.startsWith("ix")
+    ? calisma.filter((c,i) => i !== +k.slice(2))       // kimliksiz eski kayitlar
+    : calisma.filter(c => c.id !== k);
+  kaydet("m_calisma", calisma); senkYaz("calisma"); mCalisma();
+});
+
 document.getElementById("goal").addEventListener("click", e => {
   const b = e.target.closest("button[data-hedef]");
   if (!b) return;
