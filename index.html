@@ -456,7 +456,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 20:30";
+const SURUM = "20.09 20:50";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -1345,7 +1345,13 @@ document.getElementById("giris-form").addEventListener("submit", async e => {
     if (mod === "sifirla") {
       const r = await fetch(SB.url + "/auth/v1/recover?redirect_to=" + encodeURIComponent(location.origin + location.pathname),
         {method:"POST", headers:{apikey: SB.key, "Content-Type":"application/json"}, body: JSON.stringify({email: eposta})});
-      if (!r.ok) throw new Error("Bağlantı gönderilemedi");
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        const m = String(d.msg || d.message || d.error_description || "");
+        if (r.status === 429 || /rate limit|too many/i.test(m))
+          throw new Error("E-posta gönderim sınırına takıldı (Supabase ücretsiz kota). Bir saat sonra tekrar dene.");
+        throw new Error(m || `Bağlantı gönderilemedi (kod ${r.status})`);
+      }
       hataYaz("Sıfırlama bağlantısı e-postana gönderildi. Bağlantıya tıklayıp yeni şifreni belirle.", true);
       return;
     }
