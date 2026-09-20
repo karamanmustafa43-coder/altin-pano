@@ -620,7 +620,7 @@ function sayacYaz(){
 }
 document.getElementById("sayac-btn").addEventListener("click", () => {
   if (!sayac) { sayac = {bas: Date.now(), ders: document.getElementById("c-ders").value};
-                kaydet("m_sayac", sayac); tik = setInterval(sayacYaz, 1000); sayacYaz(); return; }
+                kaydet("m_sayac", sayac); senkYaz("sayac"); tik = setInterval(sayacYaz, 1000); sayacYaz(); return; }
   const dk = Math.max(1, Math.round((Date.now() - sayac.bas)/6e4)), ders = sayac.ders;
   clearInterval(tik); sayac = null; try{ localStorage.removeItem("m_sayac"); }catch{} senkYaz("sayac"); sayacYaz();
   calismaEkle(ders, dk);
