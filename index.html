@@ -118,6 +118,14 @@
   .gunler button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);
     color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;padding:0;font-family:inherit}
   .gunler button[aria-pressed="true"]{background:var(--acc-soft);border-color:var(--acc);color:var(--acc-ink)}
+  #dmenu{position:fixed;z-index:50;background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 12px 30px rgba(0,0,0,.18);padding:6px;min-width:190px}
+  #dmenu .ad{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:6px 10px 4px}
+  #dmenu button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;
+    padding:10px 10px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
+  #dmenu button:hover{background:var(--surface-2)}
+  #dmenu button.sil{color:var(--down)}
+  [data-ders]{-webkit-touch-callout:none}
   .week{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
   .day{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 5px;min-height:96px}
   .day.today{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
@@ -242,6 +250,7 @@
     <div class="shead"><h2>Bu hafta</h2><div class="meta" id="donem-meta"></div></div>
     <div class="week" id="week"></div>
     <div style="text-align:right;margin-top:8px">
+      <span style="font-size:11.5px;color:var(--muted);margin-right:8px">Ders kutusuna uzun bas ya da sağ tıkla</span>
       <button class="yenile" id="ders-duzenle" type="button">Dersleri düzenle</button>
     </div>
     <div class="panel" id="ders-editor" hidden style="margin-top:8px"></div>
@@ -361,7 +370,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 18:19";
+const SURUM = "20.09 18:24";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -557,7 +566,7 @@ function haftaProgram(){
   document.getElementById("week").innerHTML = GUN.slice(0,5).map((g,i) => {
     const d = prog.dersler.filter(x => (x.gunler||[]).includes(i));
     return `<div class="day${i===idx?" today":""}"><div class="dn">${g}</div>` +
-      (d.length ? d.map(x => `<div class="slot">${esc(x.kod)}<em>${esc(x.saat||"")}</em></div>`).join("")
+      (d.length ? d.map(x => `<div class="slot" data-ders="${esc(x.kod)}">${esc(x.kod)}<em>${esc(x.saat||"")}</em></div>`).join("")
                 : `<div class="slot" style="background:transparent;color:var(--muted);font-weight:400">—</div>`) + `</div>`;
   }).join("");
 }
@@ -589,7 +598,7 @@ function mCalisma(){
   const dersDk = {};
   calisma.filter(c => gunler.some(g => g.g === c.tarih)).forEach(c => { dersDk[c.ders||"Diğer"] = (dersDk[c.ders||"Diğer"]||0) + (c.dk||0); });
   document.getElementById("dagilim").innerHTML = Object.entries(dersDk).sort((a,b) => b[1]-a[1])
-    .map(([d,dk]) => `<span class="dg">${esc(d)} <em>${sureMetni(dk)}</em></span>`).join("");
+    .map(([d,dk]) => `<span class="dg" data-ders="${esc(d)}">${esc(d)} <em>${sureMetni(dk)}</em></span>`).join("");
 
   const s = seri();
   document.getElementById("streak").innerHTML = s > 1 ? `<b>${s} gün</b> üst üste çalışma serisi`
@@ -683,6 +692,65 @@ document.getElementById("sayac-iptal").addEventListener("click", () => {
 function calismaEkle(ders, dk){
   calisma.push({id: Date.now().toString(36), tarih: bugunIso, ders, dk, saat: new Date().toTimeString().slice(0,5)}); kaydet("m_calisma", calisma); senkYaz("calisma"); mCalisma();
 }
+/* --- derse uzun basma / sag tik menusu --- */
+function dersAdiDegistir(eski){
+  const yeniAd = (prompt("Dersin yeni adı:", eski) || "").trim();
+  if (!yeniAd || yeniAd === eski) return;
+  if (prog?.dersler) prog.dersler = prog.dersler.map(d => d.kod === eski ? {...d, kod: yeniAd} : d);
+  calisma = calisma.map(c => c.ders === eski ? {...c, ders: yeniAd} : c);
+  gorevler = gorevler.map(g => g.ders === eski ? {...g, ders: yeniAd} : g);
+  kaydet("m_calisma", calisma); kaydet("m_gorevler", gorevler);
+  senkYaz("calisma"); senkYaz("gorevler");
+  dersKaydet(); mCalisma(); mGorevler();
+}
+function dersSil(kod){
+  const kayit = calisma.filter(c => c.ders === kod).length;
+  const ek = kayit ? `
+
+${kayit} çalışma kaydı listede kalır, silinmez.` : "";
+  if (!confirm(`"${kod}" dersi listeden kaldırılsın mı?${ek}`)) return;
+  if (prog?.dersler) prog.dersler = prog.dersler.filter(d => d.kod !== kod);
+  dersKaydet();
+}
+const dmenu = document.createElement("div");
+dmenu.id = "dmenu"; dmenu.hidden = true; document.body.appendChild(dmenu);
+function menuAc(kod, x, y){
+  dmenu.innerHTML = `<div class="ad">${esc(kod)}</div>
+    <button type="button" data-ad="${esc(kod)}">Yeniden adlandır</button>
+    <button type="button" class="sil" data-sil-ders="${esc(kod)}">Sil</button>`;
+  dmenu.hidden = false;
+  const g = dmenu.getBoundingClientRect();
+  dmenu.style.left = Math.max(8, Math.min(x, innerWidth - g.width - 8)) + "px";
+  dmenu.style.top = Math.max(8, Math.min(y, innerHeight - g.height - 8)) + "px";
+}
+const menuKapat = () => { dmenu.hidden = true; };
+dmenu.addEventListener("click", e => {
+  const ad = e.target.closest("[data-ad]"), sil = e.target.closest("[data-sil-ders]");
+  menuKapat();
+  if (ad) dersAdiDegistir(ad.dataset.ad);
+  else if (sil) dersSil(sil.dataset.silDers);
+});
+addEventListener("click", e => { if (!e.target.closest("#dmenu")) menuKapat(); });
+addEventListener("scroll", menuKapat, {passive: true});
+addEventListener("contextmenu", e => {
+  const h = e.target.closest("[data-ders]");
+  if (!h) return;
+  e.preventDefault();
+  menuAc(h.dataset.ders, e.clientX, e.clientY);
+});
+let basiliTut = null;
+addEventListener("touchstart", e => {
+  const h = e.target.closest("[data-ders]");
+  if (!h) return;
+  const t = e.touches[0];
+  basiliTut = setTimeout(() => {
+    if (navigator.vibrate) navigator.vibrate(12);
+    menuAc(h.dataset.ders, t.clientX, t.clientY);
+  }, 500);
+}, {passive: true});
+["touchend","touchmove","touchcancel"].forEach(o =>
+  addEventListener(o, () => { clearTimeout(basiliTut); }, {passive: true}));
+
 document.getElementById("ders-duzenle").addEventListener("click", () => {
   const el = document.getElementById("ders-editor");
   el.hidden = !el.hidden;
