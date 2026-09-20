@@ -464,7 +464,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 23:50";
+const SURUM = "20.09 23:52";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -581,11 +581,15 @@ async function cikisYap(){
 
 const ANAHTARLAR = {gorevler:"m_gorevler", calisma:"m_calisma", notlar:"m_notlar", islemler:"a_islemler", ayarlar:"m_ayarlar", prog:"m_prog", takvim:"m_takvim", sayac:"m_sayac"};
 let senkDurum = "bekliyor", senkZaman = {};
+const yazilmamis = new Set();
 try { senkZaman = JSON.parse(localStorage.getItem("senk_zaman") || "{}"); } catch {}
 
 function senkDurumYaz(d){
   senkDurum = d;
-  const m = {esit:"bulut: eşitlendi ✓", yaziliyor:"bulut: kaydediliyor…", hata:"bulut: çevrimdışı — telefonda saklandı", bekliyor:"bulut: bağlanıyor…"};
+  const m = {esit:"bulut: eşitlendi ✓", yaziliyor:"bulut: kaydediliyor…",
+             hata: navigator.onLine ? "bulut: bağlanılamadı — cihazda saklandı"
+                                    : `çevrimdışı — ${yazilmamis.size || "0"} değişiklik sırada`,
+             bekliyor:"bulut: bağlanıyor…"};
   document.querySelectorAll(".senk").forEach(e => { e.textContent = m[d] || ""; e.style.color = d === "hata" ? "var(--down)" : "var(--muted)"; });
 }
 
@@ -615,8 +619,9 @@ function senkYaz(ad){
         body: JSON.stringify([{anahtar: ad, icerik: {veri: LISTELER.includes(ad) ? listeAl(ad) : yerel,
                                                      yerelZaman: senkZaman[ad]}}])});
       if (!r.ok) throw new Error(r.status);
-      senkDurumYaz("esit");
-    } catch { senkDurumYaz("hata"); }
+      yazilmamis.delete(ad);
+      senkDurumYaz(yazilmamis.size ? "hata" : "esit");
+    } catch { yazilmamis.add(ad); senkDurumYaz("hata"); }
   }, 500);
 }
 
@@ -1352,6 +1357,9 @@ document.addEventListener("click", e => {
   sessionStorage.removeItem("surum_deneme");
   location.replace(location.pathname + "?t=" + Date.now());
 });
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});   // cevrimdisi katmani
+}
 surumKontrol();
 setInterval(() => { if (!document.hidden) surumKontrol(); }, 300000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) surumKontrol(); });
@@ -1527,7 +1535,15 @@ if (sifirlamaModu) {                 // e-postadaki baglantiyla geldi: once yeni
 }
 veriYukle().then(fiyatCek);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { fiyatCek(); senkOku(); } });
-setInterval(() => { if (!document.hidden) senkOku(); }, 45000);   // acikken 45 sn'de bir esitle
+setInterval(() => { if (!document.hidden) senkOku(); }, 45000);
+
+function bekleyenleriGonder(){
+  if (!oturum || !navigator.onLine || !yazilmamis.size) return;
+  [...yazilmamis].forEach(senkYaz);
+}
+addEventListener("online", () => { senkDurumYaz("bekliyor"); bekleyenleriGonder(); senkOku(); });
+addEventListener("offline", () => senkDurumYaz("hata"));
+document.addEventListener("visibilitychange", () => { if (!document.hidden) bekleyenleriGonder(); });   // acikken 45 sn'de bir esitle
 </script>
 </body>
 </html>
