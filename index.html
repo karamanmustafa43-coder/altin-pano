@@ -191,7 +191,10 @@
       <h1 id="m-baslik">Bugün</h1>
       <div class="sub mono" id="m-tarih">—</div>
     </div>
-    <div class="countdown" id="m-geri" hidden><b>—</b><span>—</span></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex:0 0 auto">
+      <button class="yenile" id="m-yenile" type="button">Yenile</button>
+      <div class="countdown" id="m-geri" hidden><b>—</b><span>—</span></div>
+    </div>
   </header>
 
   <div id="m-uyari"></div>
@@ -840,6 +843,12 @@ document.getElementById("aralik").addEventListener("click", e => {
   aGrafik(aHesap());
 });
 document.getElementById("yenile").addEventListener("click", fiyatCek);
+document.getElementById("m-yenile").addEventListener("click", async e => {
+  e.target.dataset.yukleniyor = "1";
+  await senkOku();
+  mRender();
+  e.target.dataset.yukleniyor = "0";
+});
 document.getElementById("islem-form").addEventListener("submit", e => {
   e.preventDefault();
   const k = {id: Date.now().toString(36), tarih: document.getElementById("i-tarih").value,
