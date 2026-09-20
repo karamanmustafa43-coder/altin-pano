@@ -371,7 +371,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 18:28";
+const SURUM = "20.09 18:29";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -512,7 +512,9 @@ function seceneklerDoldur(){
   g.innerHTML = `<option value="">Ders yok</option>` + dersAdlari().map(d => `<option>${esc(d)}</option>`).join("") + yeni;
   if ([...c.options].some(o => o.value === oncekiC)) c.value = oncekiC;
   if ([...g.options].some(o => o.value === oncekiG)) g.value = oncekiG;
-  if (c.value === "__yeni" || !c.value) c.selectedIndex = 0;
+  const son = yukle("m_son_ders", "");
+  if (son && [...c.options].some(o => o.value === son)) c.value = son;
+  if (!c.value || c.value === "__yeni") c.selectedIndex = 0;
   rozetleriDoldur();
 }
 
@@ -813,8 +815,9 @@ document.getElementById("c-ders-rozet").addEventListener("click", e => {
   if (!b) return;
   const c = document.getElementById("c-ders");
   if (b.dataset.sec === "__yeni") { const ad = (prompt("Yeni dersin adı:") || "").trim();
-    if (ad) { dersEkle(ad); c.value = ad; rozetleriDoldur(); } return; }
+    if (ad) { dersEkle(ad); c.value = ad; kaydet("m_son_ders", ad); rozetleriDoldur(); } return; }
   c.value = b.dataset.sec;
+  kaydet("m_son_ders", c.value);
   rozetleriDoldur();
 });
 
