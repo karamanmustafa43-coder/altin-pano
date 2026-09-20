@@ -223,8 +223,9 @@
         <div class="ctrl">
           <div class="timer idle" id="timer">00:00</div>
           <div class="streak" id="streak">—</div>
+          <div class="row quick" id="c-ders-rozet" role="group" aria-label="Ders seç"></div>
+          <select id="c-ders" aria-label="Ders" hidden></select>
           <div class="row">
-            <div class="f-s"><select id="c-ders" aria-label="Ders"></select></div>
             <button class="go big" id="sayac-btn" type="button">Başlat</button>
             <button class="x" id="sayac-iptal" type="button" hidden>iptal</button>
           </div>
@@ -370,7 +371,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 18:24";
+const SURUM = "20.09 18:28";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -446,7 +447,7 @@ async function senkOku(){
         if (!ayni) {
           clearInterval(tik);
           sayac = uzak;
-          if (sayac) { kaydet("m_sayac", sayac); document.getElementById("c-ders").value = sayac.ders || ""; tik = setInterval(sayacYaz, 1000); }
+          if (sayac) { kaydet("m_sayac", sayac); document.getElementById("c-ders").value = sayac.ders || ""; rozetleriDoldur(); tik = setInterval(sayacYaz, 1000); }
           else { try { localStorage.removeItem("m_sayac"); } catch {} }
           sayacYaz();
         }
@@ -511,6 +512,17 @@ function seceneklerDoldur(){
   g.innerHTML = `<option value="">Ders yok</option>` + dersAdlari().map(d => `<option>${esc(d)}</option>`).join("") + yeni;
   if ([...c.options].some(o => o.value === oncekiC)) c.value = oncekiC;
   if ([...g.options].some(o => o.value === oncekiG)) g.value = oncekiG;
+  if (c.value === "__yeni" || !c.value) c.selectedIndex = 0;
+  rozetleriDoldur();
+}
+
+function rozetleriDoldur(){
+  const c = document.getElementById("c-ders"), ek = ["Fourier","Seminer","Diğer"];
+  document.getElementById("c-ders-rozet").innerHTML =
+    [...dersAdlari().map(d => [d, false]), ...ek.map(d => [d, true])].map(([d, sabit]) =>
+      `<button type="button" data-sec="${esc(d)}" data-ders="${esc(d)}"${sabit ? ' data-sabit="1"' : ""}
+        aria-pressed="${c.value === d}">${esc(d)}</button>`).join("") +
+    `<button type="button" data-sec="__yeni" aria-label="Yeni ders ekle">+</button>`;
 }
 
 /* --- ders yonetimi --- */
@@ -733,14 +745,14 @@ dmenu.addEventListener("click", e => {
 addEventListener("click", e => { if (!e.target.closest("#dmenu")) menuKapat(); });
 addEventListener("scroll", menuKapat, {passive: true});
 addEventListener("contextmenu", e => {
-  const h = e.target.closest("[data-ders]");
+  const h = e.target.closest("[data-ders]:not([data-sabit])");
   if (!h) return;
   e.preventDefault();
   menuAc(h.dataset.ders, e.clientX, e.clientY);
 });
 let basiliTut = null;
 addEventListener("touchstart", e => {
-  const h = e.target.closest("[data-ders]");
+  const h = e.target.closest("[data-ders]:not([data-sabit])");
   if (!h) return;
   const t = e.touches[0];
   basiliTut = setTimeout(() => {
@@ -795,6 +807,16 @@ function yeniDersSor(secim){
 }
 document.getElementById("c-ders").addEventListener("change", e => { if (e.target.value === "__yeni") yeniDersSor(e.target); });
 document.getElementById("g-ders").addEventListener("change", e => { if (e.target.value === "__yeni") yeniDersSor(e.target); });
+
+document.getElementById("c-ders-rozet").addEventListener("click", e => {
+  const b = e.target.closest("button[data-sec]");
+  if (!b) return;
+  const c = document.getElementById("c-ders");
+  if (b.dataset.sec === "__yeni") { const ad = (prompt("Yeni dersin adı:") || "").trim();
+    if (ad) { dersEkle(ad); c.value = ad; rozetleriDoldur(); } return; }
+  c.value = b.dataset.sec;
+  rozetleriDoldur();
+});
 
 document.getElementById("c-dk").addEventListener("click", e => {
   const b = e.target.closest("button[data-dk]");
@@ -1034,7 +1056,7 @@ document.getElementById("g-teslim").value = "";
 seceneklerDoldur();
 sekme(yukle("aktif_sekme", "merkez"));
 sayac = yukle("m_sayac", null);
-if (sayac) { document.getElementById("c-ders").value = sayac.ders || ""; tik = setInterval(sayacYaz, 1000); }
+if (sayac) { document.getElementById("c-ders").value = sayac.ders || ""; rozetleriDoldur(); tik = setInterval(sayacYaz, 1000); }
 sayacYaz();
 mRender();
 aRender();
