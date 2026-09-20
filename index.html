@@ -514,6 +514,10 @@
     <div class="panel">
       <div class="nerede" id="n-sonraki"></div>
       <div class="vakitler" id="n-vakitler"></div>
+      <div style="text-align:right;margin-top:10px">
+        <button class="yenile" id="n-ayar-ac" type="button">İnce ayar</button>
+      </div>
+      <div id="n-ayar" hidden style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px"></div>
     </div>
   </section>
 
@@ -559,7 +563,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "21.09 00:28";
+const SURUM = "21.09 00:31";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -690,7 +694,8 @@ function senkDurumYaz(d){
 
 const bekleyen = {};
 function senkYaz(ad){
-  const yerel = ad === "sayac" ? (sayac || {bos: true}) : {gorevler, calisma, notlar, islemler, prog, takvim, ayarlar: {hedef: hedefDk}}[ad];
+  const yerel = ad === "sayac" ? (sayac || {bos: true})
+    : {gorevler, calisma, notlar, islemler, prog, takvim, ayarlar: {hedef: hedefDk, namaz: duzelt}}[ad];
   senkZaman[ad] = new Date().toISOString();
   try { localStorage.setItem("senk_zaman", JSON.stringify(senkZaman)); } catch {}
   clearTimeout(bekleyen[ad]);
@@ -756,7 +761,10 @@ async function senkOku(){
       }
       else if (ad === "prog") { prog = v; kaydet("m_prog", v); seceneklerDoldur(); }
       else if (ad === "takvim") { takvim = v; kaydet("m_takvim", v); }
-      else if (ad === "ayarlar" && v.hedef) { hedefDk = v.hedef; kaydet("m_hedef", v.hedef); }
+      else if (ad === "ayarlar") {
+        if (v.hedef) { hedefDk = v.hedef; kaydet("m_hedef", v.hedef); }
+        if (v.namaz) { duzelt = v.namaz; kaydet("n_duzelt", duzelt); nRender(); }
+      }
       senkZaman[ad] = sunucuZ; degisti = true;
     });
     try { localStorage.setItem("senk_zaman", JSON.stringify(senkZaman)); } catch {}
@@ -1232,6 +1240,13 @@ document.getElementById("disa-aktar").addEventListener("click", async e => {
 /* ===== NAMAZ ===== */
 const NAMAZ = {enlem: 39.7589, boylam: -84.1916, yontem: 13};      // Dayton, Ohio · Diyanet yontemi
 const VAKIT_ADI = [["Imsak","İmsak"],["Sunrise","Güneş"],["Dhuhr","Öğle"],["Asr","İkindi"],["Maghrib","Akşam"],["Isha","Yatsı"]];
+let duzelt = yukle("n_duzelt", {});        // vakit basina dakika duzeltmesi
+const saatKaydir = (hhmm, dk) => {
+  if (!hhmm || !dk) return hhmm || "";
+  const [sa, mm] = hhmm.split(":").map(Number);
+  let t = (sa * 60 + mm + dk + 1440) % 1440;
+  return String(Math.floor(t / 60)).padStart(2,"0") + ":" + String(t % 60).padStart(2,"0");
+};
 let aylar = yukle("n_aylar", {});        // {"2026-09": {"2026-09-01": {Imsak:"05:20", ...}}}
 let nSecili = bugunIso, nAy = bugunIso.slice(0,7);
 
@@ -1270,7 +1285,13 @@ async function namazYukle(zorla){
   nRender();
 }
 
-const gunSaatleri = t => aylar[t.slice(0,7)]?.[t];
+const gunSaatleri = t => {
+  const ham = aylar[t.slice(0,7)]?.[t];
+  if (!ham) return ham;
+  const c = {};
+  VAKIT_ADI.forEach(([k]) => { c[k] = saatKaydir(ham[k], duzelt[k] || 0); });
+  return c;
+};
 
 function sonrakiVakit(){
   const t = gunSaatleri(bugunIso);
@@ -1332,6 +1353,36 @@ function takvimCiz(){
         class="${t === bugunIso ? "bugun " : ""}${t === nSecili ? "secili" : ""}">${i+1}</button>`;
     }).join("");
 }
+
+function ayarCiz(){
+  const el = document.getElementById("n-ayar");
+  if (el.hidden) return;
+  el.innerHTML = VAKIT_ADI.map(([k, ad]) => `<div class="vakit" style="padding:7px 2px">
+      <span class="ad">${esc(ad)}</span>
+      <span class="goal" style="margin:0">
+        <button type="button" data-ayar="${k}" data-yon="-1" aria-label="${esc(ad)} bir dakika geri">−</button>
+        <b class="mono" style="color:var(--ink-2);min-width:46px;display:inline-block;text-align:center">${(duzelt[k]||0) > 0 ? "+" : ""}${duzelt[k]||0} dk</b>
+        <button type="button" data-ayar="${k}" data-yon="1" aria-label="${esc(ad)} bir dakika ileri">+</button>
+      </span></div>`).join("") +
+    `<div style="font-size:11.5px;color:var(--muted);margin-top:8px">
+       Diyanet takvimiyle farklıysa buradan dakika ekleyip çıkarabilirsin. Ayar tüm günlere uygulanır ve
+       diğer cihazlarına da geçer.</div>`;
+}
+document.getElementById("n-ayar-ac").addEventListener("click", () => {
+  const el = document.getElementById("n-ayar");
+  el.hidden = !el.hidden;
+  document.getElementById("n-ayar-ac").textContent = el.hidden ? "İnce ayar" : "Kapat";
+  ayarCiz();
+});
+document.getElementById("n-ayar").addEventListener("click", e => {
+  const b = e.target.closest("[data-ayar]");
+  if (!b) return;
+  const k = b.dataset.ayar;
+  duzelt[k] = Math.max(-30, Math.min(30, (duzelt[k] || 0) + (+b.dataset.yon)));
+  kaydet("n_duzelt", duzelt);
+  senkYaz("ayarlar");
+  nRender(); ayarCiz();
+});
 
 document.getElementById("n-takvim").addEventListener("click", e => {
   const b = e.target.closest("button[data-gun]");
