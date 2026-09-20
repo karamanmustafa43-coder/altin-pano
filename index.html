@@ -372,7 +372,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 18:34";
+const SURUM = "20.09 18:37";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -505,7 +505,7 @@ document.getElementById("t-altin").addEventListener("click", () => sekme("altin"
 /* ===== MERKEZ ===== */
 const dersAdlari = () => (prog?.dersler || []).map(d => d.kod);
 function seceneklerDoldur(){
-  const ek = ["Fourier","Seminer","Diğer"];
+  const ek = ["Diğer"];
   const c = document.getElementById("c-ders"), g = document.getElementById("g-ders");
   const oncekiC = c.value, oncekiG = g.value;
   const yeni = `<option value="__yeni">+ Yeni ders ekle…</option>`;
@@ -520,7 +520,7 @@ function seceneklerDoldur(){
 }
 
 function rozetleriDoldur(){
-  const c = document.getElementById("c-ders"), ek = ["Fourier","Seminer","Diğer"];
+  const c = document.getElementById("c-ders"), ek = ["Diğer"];
   document.getElementById("c-ders-rozet").innerHTML =
     [...dersAdlari().map(d => [d, false]), ...ek.map(d => [d, true])].map(([d, sabit]) =>
       `<button type="button" data-sec="${esc(d)}" data-ders="${esc(d)}"${sabit ? ' data-sabit="1"' : ""}
