@@ -273,7 +273,7 @@
     <button class="yenile" id="disa-aktar" type="button">Verileri kopyala</button><br>
     <span class="senk">bulut: bağlanıyor…</span><br>
     Veriler telefonda tutulur ve kendi bulut veritabanına eşitlenir.<br>
-    <span id="surum"></span>
+    <span id="surum"></span> · kendini günceller
   </footer>
 </main>
 
@@ -361,7 +361,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 11:16";
+const SURUM = "20.09 18:19";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -971,6 +971,23 @@ sayacYaz();
 mRender();
 aRender();
 document.getElementById("surum").textContent = "sürüm " + SURUM;
+
+/* yeni surum varsa kendini tazele (onbellek yuzunden elle yenilemeye gerek kalmasin) */
+async function surumKontrol(){
+  try {
+    const r = await fetch("surum.json?t=" + Date.now(), {cache: "no-store"});
+    if (!r.ok) return;
+    const {surum} = await r.json();
+    if (!surum || surum === SURUM) return;
+    if (sessionStorage.getItem("surum_denendi") === surum) return;   // sonsuz donguye girme
+    sessionStorage.setItem("surum_denendi", surum);
+    document.getElementById("surum").textContent = "yeni sürüm yükleniyor…";
+    location.replace(location.pathname + "?s=" + encodeURIComponent(surum));
+  } catch {}
+}
+surumKontrol();
+setInterval(() => { if (!document.hidden) surumKontrol(); }, 300000);        // 5 dakikada bir
+document.addEventListener("visibilitychange", () => { if (!document.hidden) surumKontrol(); });
 senkDurumYaz("bekliyor");
 senkOku().then(() => tohumlanan.forEach(senkYaz));
 veriYukle().then(fiyatCek);
