@@ -255,8 +255,8 @@
 
   <footer>
     <button class="yenile" id="disa-aktar" type="button">Verileri kopyala</button><br>
-    <b>Veriler yalnızca bu telefonda saklanır.</b><br>
-    Claude'a aktarmak istersen kopyala ve sohbete yapıştır.
+    <span class="senk">bulut: bağlanıyor…</span><br>
+    Veriler telefonda tutulur ve kendi bulut veritabanına eşitlenir.
   </footer>
 </main>
 
@@ -324,7 +324,7 @@
 
   <footer>
     Fiyat IAR Platform'un açık servisinden 15 dakikada bir tazelenir; hesap telefonunda yapılır.<br>
-    <b>Portföyün yalnızca bu telefonda saklanır.</b><br>
+    <span class="senk">bulut: bağlanıyor…</span><br>
     Kâr/zarar bozdurma fiyatıyla. Bilgilendirme amaçlıdır, yatırım tavsiyesi değildir.
   </footer>
 </main>
@@ -361,6 +361,65 @@ const gunFark = t => Math.round((new Date(t+"T00:00:00") - new Date(bugunIso+"T0
 const gunMetni = n => n === 0 ? "bugün" : n === 1 ? "yarın" : n < 0 ? Math.abs(n)+" gün geçti" : n+" gün";
 const kaydet = (k,v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} };
 const yukle = (k,v) => { try{ const s = localStorage.getItem(k); return s === null ? v : JSON.parse(s); }catch{ return v; } };
+
+/* ---- bulut (Supabase) ---- */
+const SB = {
+  url: "https://ytjlbclwihcoarconuxp.supabase.co",
+  key: "sb_publishable_Ve4xLucFlCwWjDab_A-m1g_MhU5SaDN"   // yayimlanabilir anahtar: istemci kodunda durmasi normaldir
+};
+const SB_BAS = {apikey: SB.key, Authorization: "Bearer " + SB.key, "Content-Type": "application/json"};
+const ANAHTARLAR = {gorevler:"m_gorevler", calisma:"m_calisma", notlar:"m_notlar", islemler:"a_islemler", ayarlar:"m_ayarlar"};
+let senkDurum = "bekliyor", senkZaman = {};
+try { senkZaman = JSON.parse(localStorage.getItem("senk_zaman") || "{}"); } catch {}
+
+function senkDurumYaz(d){
+  senkDurum = d;
+  const m = {esit:"bulut: eşitlendi ✓", yaziliyor:"bulut: kaydediliyor…", hata:"bulut: çevrimdışı — telefonda saklandı", bekliyor:"bulut: bağlanıyor…"};
+  document.querySelectorAll(".senk").forEach(e => { e.textContent = m[d] || ""; e.style.color = d === "hata" ? "var(--down)" : "var(--muted)"; });
+}
+
+const bekleyen = {};
+function senkYaz(ad){
+  const yerel = {gorevler, calisma, notlar, islemler, ayarlar: {hedef: hedefDk}}[ad];
+  senkZaman[ad] = new Date().toISOString();
+  try { localStorage.setItem("senk_zaman", JSON.stringify(senkZaman)); } catch {}
+  clearTimeout(bekleyen[ad]);
+  bekleyen[ad] = setTimeout(async () => {
+    senkDurumYaz("yaziliyor");
+    try {
+      const r = await fetch(SB.url + "/rest/v1/veri", {method:"POST", headers: {...SB_BAS, Prefer:"resolution=merge-duplicates"},
+        body: JSON.stringify([{anahtar: ad, icerik: {veri: yerel, yerelZaman: senkZaman[ad]}}])});
+      if (!r.ok) throw new Error(r.status);
+      senkDurumYaz("esit");
+    } catch { senkDurumYaz("hata"); }
+  }, 500);
+}
+
+async function senkOku(){
+  try {
+    const r = await fetch(SB.url + "/rest/v1/veri?select=anahtar,icerik,guncellendi", {headers: SB_BAS, cache:"no-store"});
+    if (!r.ok) throw new Error(r.status);
+    const satirlar = await r.json();
+    let degisti = false;
+    satirlar.forEach(st => {
+      const ad = st.anahtar, yerelZ = senkZaman[ad], sunucuZ = st.icerik?.yerelZaman || st.guncellendi;
+      if (yerelZ && sunucuZ && yerelZ > sunucuZ) return;          // yereldeki daha yeni: sonra yukleriz
+      const v = st.icerik?.veri;
+      if (v === undefined) return;
+      if (ad === "gorevler") { gorevler = v; kaydet("m_gorevler", v); }
+      else if (ad === "calisma") { calisma = v; kaydet("m_calisma", v); }
+      else if (ad === "notlar") { notlar = v; kaydet("m_notlar", v); }
+      else if (ad === "islemler") { islemler = v; kaydet("a_islemler", v); }
+      else if (ad === "ayarlar" && v.hedef) { hedefDk = v.hedef; kaydet("m_hedef", v.hedef); }
+      senkZaman[ad] = sunucuZ; degisti = true;
+    });
+    try { localStorage.setItem("senk_zaman", JSON.stringify(senkZaman)); } catch {}
+    senkDurumYaz("esit");
+    if (degisti) { mRender(); aRender(); }
+    const eksik = Object.keys(ANAHTARLAR).filter(ad => !satirlar.some(s => s.anahtar === ad));
+    eksik.forEach(senkYaz);       // bulutta olmayanlari ilk kez yaz
+  } catch { senkDurumYaz("hata"); }
+}
 
 let gorevler = yukle("m_gorevler", []), calisma = yukle("m_calisma", []), notlar = yukle("m_notlar", []);
 let hedefDk = yukle("m_hedef", 600), prog = yukle("m_prog", null), takvim = yukle("m_takvim", []);
@@ -540,7 +599,7 @@ document.getElementById("sayac-iptal").addEventListener("click", () => {
   clearInterval(tik); sayac = null; try{ localStorage.removeItem("m_sayac"); }catch{} sayacYaz();
 });
 function calismaEkle(ders, dk){
-  calisma.push({tarih: bugunIso, ders, dk}); kaydet("m_calisma", calisma); mCalisma();
+  calisma.push({tarih: bugunIso, ders, dk}); kaydet("m_calisma", calisma); senkYaz("calisma"); mCalisma();
 }
 document.getElementById("c-dk").addEventListener("click", e => {
   const b = e.target.closest("button[data-dk]");
@@ -550,7 +609,7 @@ document.getElementById("goal").addEventListener("click", e => {
   const b = e.target.closest("button[data-hedef]");
   if (!b) return;
   hedefDk = Math.min(3000, Math.max(60, hedefDk + (+b.dataset.hedef)));
-  kaydet("m_hedef", hedefDk); mCalisma();
+  kaydet("m_hedef", hedefDk); senkYaz("ayarlar"); mCalisma();
 });
 document.getElementById("gorev-form").addEventListener("submit", e => {
   e.preventDefault();
@@ -558,28 +617,28 @@ document.getElementById("gorev-form").addEventListener("submit", e => {
   if (!baslik) return;
   gorevler.push({id: Date.now().toString(36), baslik, ders: document.getElementById("g-ders").value,
                  teslim: document.getElementById("g-teslim").value, durum: "acik"});
-  kaydet("m_gorevler", gorevler); e.target.reset(); mGorevler();
+  kaydet("m_gorevler", gorevler); senkYaz("gorevler"); e.target.reset(); mGorevler();
 });
 document.getElementById("gorevler").addEventListener("click", e => {
   const sil = e.target.closest("[data-sil]");
-  if (sil) { gorevler = gorevler.filter(g => g.id !== sil.dataset.sil); kaydet("m_gorevler", gorevler); mGorevler(); return; }
+  if (sil) { gorevler = gorevler.filter(g => g.id !== sil.dataset.sil); kaydet("m_gorevler", gorevler); senkYaz("gorevler"); mGorevler(); return; }
   const t = e.target.closest(".tick");
   if (!t) return;
   const id = t.closest("li").dataset.id, sira = {acik:"yapiliyor", yapiliyor:"bitti", bitti:"acik"};
   gorevler = gorevler.map(g => g.id === id ? {...g, durum: sira[g.durum] || "yapiliyor"} : g);
-  kaydet("m_gorevler", gorevler); mGorevler();
+  kaydet("m_gorevler", gorevler); senkYaz("gorevler"); mGorevler();
 });
 document.getElementById("not-form").addEventListener("submit", e => {
   e.preventDefault();
   const metin = document.getElementById("n-metin").value.trim();
   if (!metin) return;
   notlar.unshift({id: Date.now().toString(36), metin, tarih: bugunIso});
-  kaydet("m_notlar", notlar); document.getElementById("n-metin").value = ""; mNotlar();
+  kaydet("m_notlar", notlar); senkYaz("notlar"); document.getElementById("n-metin").value = ""; mNotlar();
 });
 document.getElementById("notlar").addEventListener("click", e => {
   const s = e.target.closest("[data-notsil]");
   if (!s) return;
-  notlar = notlar.filter(n => n.id !== s.dataset.notsil); kaydet("m_notlar", notlar); mNotlar();
+  notlar = notlar.filter(n => n.id !== s.dataset.notsil); kaydet("m_notlar", notlar); senkYaz("notlar"); mNotlar();
 });
 document.getElementById("disa-aktar").addEventListener("click", async e => {
   const veri = JSON.stringify({gorevler, calisma: calisma.slice(-60), notlar, islemler}, null, 1);
@@ -747,7 +806,7 @@ document.getElementById("islem-form").addEventListener("submit", e => {
              tur: document.getElementById("i-tur").value, gram: +document.getElementById("i-gram").value,
              birim_fiyat_tl: +document.getElementById("i-fiyat").value};
   if (!k.tarih || !k.gram || !k.birim_fiyat_tl) return;
-  islemler.push(k); kaydet("a_islemler", islemler);
+  islemler.push(k); kaydet("a_islemler", islemler); senkYaz("islemler");
   document.getElementById("i-gram").value = ""; document.getElementById("i-fiyat").value = "";
   aRender();
 });
@@ -755,7 +814,7 @@ document.getElementById("islemler").addEventListener("click", e => {
   const s = e.target.closest("[data-isil]");
   if (!s) return;
   islemler = islemler.filter((i,ix) => String(i.id ?? ix) !== s.dataset.isil);
-  kaydet("a_islemler", islemler); aRender();
+  kaydet("a_islemler", islemler); senkYaz("islemler"); aRender();
 });
 
 /* ===== acilis ===== */
@@ -768,8 +827,10 @@ if (sayac) { document.getElementById("c-ders").value = sayac.ders || ""; tik = s
 sayacYaz();
 mRender();
 aRender();
+senkDurumYaz("bekliyor");
+senkOku();
 veriYukle().then(fiyatCek);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) fiyatCek(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { fiyatCek(); senkOku(); } });
 </script>
 </body>
 </html>
