@@ -272,7 +272,8 @@
   <footer>
     <button class="yenile" id="disa-aktar" type="button">Verileri kopyala</button><br>
     <span class="senk">bulut: bağlanıyor…</span><br>
-    Veriler telefonda tutulur ve kendi bulut veritabanına eşitlenir.
+    Veriler telefonda tutulur ve kendi bulut veritabanına eşitlenir.<br>
+    <span id="surum"></span>
   </footer>
 </main>
 
@@ -360,6 +361,7 @@
 
 <script>
 /* ===== ortak ===== */
+const SURUM = "20.09 11:16";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -968,6 +970,7 @@ if (sayac) { document.getElementById("c-ders").value = sayac.ders || ""; tik = s
 sayacYaz();
 mRender();
 aRender();
+document.getElementById("surum").textContent = "sürüm " + SURUM;
 senkDurumYaz("bekliyor");
 senkOku().then(() => tohumlanan.forEach(senkYaz));
 veriYukle().then(fiyatCek);
