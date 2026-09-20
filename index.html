@@ -404,8 +404,11 @@ async function senkOku(){
     satirlar.forEach(st => {
       const ad = st.anahtar, yerelZ = senkZaman[ad], sunucuZ = st.icerik?.yerelZaman || st.guncellendi;
       if (yerelZ && sunucuZ && yerelZ > sunucuZ) return;          // yereldeki daha yeni: sonra yukleriz
+      if (tohumlanan.has(ad)) return;                              // bu acilista baglantidan geldi: yerel kazanir
       const v = st.icerik?.veri;
       if (v === undefined) return;
+      const yerelVar = {gorevler, calisma, notlar, islemler}[ad];
+      if (Array.isArray(v) && !v.length && Array.isArray(yerelVar) && yerelVar.length) return;  // bos sunucu dolu yereli silmesin
       if (ad === "gorevler") { gorevler = v; kaydet("m_gorevler", v); }
       else if (ad === "calisma") { calisma = v; kaydet("m_calisma", v); }
       else if (ad === "notlar") { notlar = v; kaydet("m_notlar", v); }
@@ -427,16 +430,17 @@ let islemler = yukle("a_islemler", []), gecmis = yukle("a_gecmis", []), enflasyo
 let fiyat = yukle("a_fiyat", null), aralik = 7, sayac = null, tik = null;
 
 /* baglantidaki #v=... ilk kurulum: veri sunucuya gitmez */
+const tohumlanan = new Set();
 (function kurulum(){
   if (!location.hash.startsWith("#v=")) return;
   try {
     const g = JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(3)))));
-    if (g.islemler && !islemler.length) { islemler = g.islemler; kaydet("a_islemler", islemler); }
-    if (g.gorevler && !gorevler.length) { gorevler = g.gorevler; kaydet("m_gorevler", gorevler); }
-    if (g.notlar && !notlar.length) { notlar = g.notlar; kaydet("m_notlar", notlar); }
+    if (g.islemler && !islemler.length) { islemler = g.islemler; kaydet("a_islemler", islemler);  tohumlanan.add("islemler"); }
+    if (g.gorevler && !gorevler.length) { gorevler = g.gorevler; kaydet("m_gorevler", gorevler);  tohumlanan.add("gorevler"); }
+    if (g.notlar && !notlar.length) { notlar = g.notlar; kaydet("m_notlar", notlar);  tohumlanan.add("notlar"); }
     if (g.prog) { prog = g.prog; kaydet("m_prog", prog); }
     if (g.takvim) { takvim = g.takvim; kaydet("m_takvim", takvim); }
-    if (g.hedef) { hedefDk = g.hedef; kaydet("m_hedef", hedefDk); }
+    if (g.hedef) { hedefDk = g.hedef; kaydet("m_hedef", hedefDk); tohumlanan.add("ayarlar"); }
   } catch {}
   history.replaceState(null, "", location.pathname);
 })();
@@ -828,7 +832,7 @@ sayacYaz();
 mRender();
 aRender();
 senkDurumYaz("bekliyor");
-senkOku();
+senkOku().then(() => tohumlanan.forEach(senkYaz));
 veriYukle().then(fiyatCek);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { fiyatCek(); senkOku(); } });
 </script>
