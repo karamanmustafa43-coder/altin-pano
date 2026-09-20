@@ -24,6 +24,11 @@
     --izgara:rgba(14,124,123,.07);
     color-scheme:light;
   }
+  :root[data-app="namaz"]{
+    --bg:#eef2ef; --surface:#ffffff; --surface-2:#f5f8f6;
+    --ink:#11201a; --ink-2:#465a51; --muted:#77897f; --line:#dbe4df;
+    --acc:#1a7a55; --acc-soft:#dcefe6; --acc-ink:#125c3f;
+  }
   :root[data-app="altin"]{
     --bg:#f2efe9; --surface:#ffffff; --surface-2:#faf7f2;
     --ink:#1d1a14; --ink-2:#57503f; --muted:#8b8171; --line:#e2dccf;
@@ -37,6 +42,11 @@
       --up:#6cc48c; --up-soft:#12291d; --warn:#e0a94a; --warn-soft:#2b2214; --down:#e8877b; --down-soft:#2e1a17;
       --izgara:rgba(59,179,176,.10);
       color-scheme:dark;
+    }
+    :root[data-app="namaz"]{
+      --bg:#0c1411; --surface:#131d19; --surface-2:#182420;
+      --ink:#e6efea; --ink-2:#a3b8ae; --muted:#77897f; --line:#22312b;
+      --acc:#4cc08a; --acc-soft:#102820; --acc-ink:#8fdcb8;
     }
     :root[data-app="altin"]{
       --bg:#15120d; --surface:#1d1912; --surface-2:#231e16;
@@ -211,6 +221,34 @@
   .uyari.sari{background:var(--warn-soft);border-left-color:var(--warn)}
   footer{margin-top:24px;text-align:center;font-size:11.5px;color:var(--muted);line-height:1.7}
   footer b{color:var(--ink-2)}
+
+  /* namaz */
+  .vakitler{display:flex;flex-direction:column}
+  .vakit{display:flex;align-items:center;gap:12px;padding:13px 2px;border-bottom:1px solid var(--line)}
+  .vakit:last-child{border-bottom:0}
+  .vakit .ad{flex:1 1 auto;font-size:15px}
+  .vakit .sa{font-family:"IBM Plex Mono",monospace;font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+  .vakit.simdi{background:var(--acc-soft);border-radius:12px;padding-left:12px;padding-right:12px;border-bottom-color:transparent}
+  .vakit.simdi .ad{font-weight:600;color:var(--acc-ink)}
+  .vakit.simdi .sa{color:var(--acc-ink)}
+  .vakit .rozet{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--acc);color:#fff}
+  .vakit.gecti{opacity:.45}
+  .nerede{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+  .sayac-vakit{font-family:"IBM Plex Mono",monospace;font-size:30px;font-weight:700;color:var(--acc-ink);line-height:1.1}
+
+  .takvim{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .takvim .bas{font-size:10.5px;font-weight:600;color:var(--muted);text-align:center;padding-bottom:4px;
+    font-family:"IBM Plex Mono",monospace;letter-spacing:.06em}
+  .takvim button{aspect-ratio:1;border:1px solid transparent;background:none;border-radius:10px;cursor:pointer;
+    font:inherit;font-size:13.5px;color:var(--ink);font-variant-numeric:tabular-nums;padding:0}
+  .takvim button:disabled{color:var(--muted);opacity:.35;cursor:default}
+  .takvim button.bugun{border-color:var(--acc)}
+  .takvim button.secili{background:var(--acc);color:#fff;font-weight:700}
+  .aygez{display:flex;align-items:center;gap:8px}
+  .aygez button{width:32px;height:32px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);
+    color:var(--ink-2);cursor:pointer;font:inherit;font-size:15px;padding:0}
+  .aygez button:disabled{opacity:.35;cursor:default}
+  .ayad{font-size:13.5px;font-weight:600;min-width:104px;text-align:center}
 
   /* giris */
   #giris{min-height:76vh;display:grid;place-items:center;padding:24px 16px}
@@ -449,11 +487,59 @@
   </footer>
 </main>
 
+<!-- ============ NAMAZ ============ -->
+<main id="v-namaz" class="wrap" hidden>
+  <header class="top">
+    <div class="g">
+      <div class="eyebrow">Delta · Namaz</div>
+      <h1 id="n-baslik">Bugün</h1>
+      <div class="sub mono" id="n-tarih">—</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto">
+      <button class="yenile" id="n-yenile" type="button">Yenile</button>
+      <button class="avatar" data-hesapmenu type="button" aria-label="Hesap">·</button>
+    </div>
+  </header>
+
+  <section>
+    <div class="shead"><h2>Vakitler</h2><div class="meta" id="n-konum">Dayton, Ohio</div></div>
+    <div class="panel">
+      <div class="nerede" id="n-sonraki"></div>
+      <div class="vakitler" id="n-vakitler"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="shead"><h2>Takvim</h2>
+      <div class="aygez">
+        <button type="button" id="n-geri" aria-label="Önceki ay">‹</button>
+        <span class="ayad" id="n-ayad">—</span>
+        <button type="button" id="n-ileri" aria-label="Sonraki ay">›</button>
+      </div>
+    </div>
+    <div class="panel"><div class="takvim" id="n-takvim"></div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:10px">
+        Bir güne dokun, o günün vakitleri üstte açılır. Önceki, bu ve gelecek ay elinin altında.</div>
+    </div>
+  </section>
+
+  <footer>
+    Vakitler <b>Diyanet İşleri Başkanlığı</b> hesaplama yöntemiyle, Dayton (America/New_York) saatine göre.<br>
+    Kaynak: AlAdhan · çevrimdışıyken en son indirilen aylar gösterilir.
+  </footer>
+</main>
+
 <nav class="tabs" role="tablist">
   <button id="t-merkez" role="tab" aria-selected="true" aria-controls="v-merkez">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <rect x="3" y="4" width="18" height="17" rx="3"></rect><path d="M8 2v4M16 2v4M3 10h18"></path><path d="M8 15h4"></path></svg>
     Merkez
+  </button>
+  <button id="t-namaz" role="tab" aria-selected="false" aria-controls="v-namaz">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M5 21v-7a7 7 0 0 1 14 0v7"></path><path d="M3 21h18"></path>
+      <path d="M12 3c1.6 1 2.4 2 2.4 3.2S13.3 8.4 12 9c-1.3-.6-2.4-1.6-2.4-2.8S10.4 4 12 3z"></path></svg>
+    Namaz
   </button>
   <button id="t-altin" role="tab" aria-selected="false" aria-controls="v-altin">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -464,7 +550,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 23:52";
+const SURUM = "21.09 00:25";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -560,8 +646,8 @@ async function girisIstek(yol, eposta, sifre){
 
 function girisGoster(goster){
   document.getElementById("giris").hidden = !goster;
-  document.getElementById("v-merkez").hidden = goster || document.documentElement.dataset.app === "altin";
-  document.getElementById("v-altin").hidden = goster || document.documentElement.dataset.app !== "altin";
+  const aktif = document.documentElement.dataset.app || "merkez";
+  ["merkez","namaz","altin"].forEach(x => { document.getElementById("v-" + x).hidden = goster || aktif !== x; });
   document.querySelector("nav.tabs").hidden = goster;
   avatarYaz();
   document.querySelectorAll("[data-hesapmenu]").forEach(b => { b.hidden = goster; });
@@ -697,17 +783,20 @@ const tohumlanan = new Set();
 function sekme(ad){
   document.documentElement.dataset.app = ad;
   const girisAcik = !document.getElementById("giris").hidden;
-  document.getElementById("v-merkez").hidden = girisAcik || ad !== "merkez";
-  document.getElementById("v-altin").hidden = girisAcik || ad !== "altin";
-  document.getElementById("t-merkez").setAttribute("aria-selected", ad === "merkez");
-  document.getElementById("t-altin").setAttribute("aria-selected", ad === "altin");
-  document.querySelector('meta[name="theme-color"]').content = ad === "altin" ? "#1d1a14" : "#0f1e1d";
+  ["merkez","namaz","altin"].forEach(x => {
+    document.getElementById("v-" + x).hidden = girisAcik || ad !== x;
+    document.getElementById("t-" + x).setAttribute("aria-selected", ad === x);
+  });
+  document.querySelector('meta[name="theme-color"]').content =
+    ad === "altin" ? "#1d1a14" : ad === "namaz" ? "#11201a" : "#0f1e1d";
   kaydet("aktif_sekme", ad);
   window.scrollTo(0, 0);
   if (ad === "altin") aRender();
+  if (ad === "namaz") { nRender(); namazYukle(); }
 }
 document.getElementById("t-merkez").addEventListener("click", () => sekme("merkez"));
 document.getElementById("t-altin").addEventListener("click", () => sekme("altin"));
+document.getElementById("t-namaz").addEventListener("click", () => sekme("namaz"));
 
 /* ===== MERKEZ ===== */
 const dersAdlari = () => (prog?.dersler || []).map(d => d.kod);
@@ -1131,6 +1220,131 @@ document.getElementById("disa-aktar").addEventListener("click", async e => {
   catch { prompt("Kopyala:", veri); }
 });
 
+/* ===== NAMAZ ===== */
+const NAMAZ = {enlem: 39.7589, boylam: -84.1916, yontem: 13};      // Dayton, Ohio · Diyanet yontemi
+const VAKIT_ADI = [["Imsak","İmsak"],["Sunrise","Güneş"],["Dhuhr","Öğle"],["Asr","İkindi"],["Maghrib","Akşam"],["Isha","Yatsı"]];
+let aylar = yukle("n_aylar", {});        // {"2026-09": {"2026-09-01": {Imsak:"05:20", ...}}}
+let nSecili = bugunIso, nAy = bugunIso.slice(0,7);
+
+const ayAnahtari = (yil, ay) => `${yil}-${String(ay).padStart(2,"0")}`;
+function ucAy(){
+  const d = new Date(bugun.getFullYear(), bugun.getMonth(), 1);
+  return [-1,0,1].map(k => { const t = new Date(d.getFullYear(), d.getMonth()+k, 1);
+                             return ayAnahtari(t.getFullYear(), t.getMonth()+1); });
+}
+
+async function namazYukle(zorla){
+  const gerek = ucAy().filter(a => zorla || !aylar[a]);
+  if (gerek.length) {
+    document.getElementById("n-konum").textContent = "vakitler alınıyor…";
+    for (const a of gerek) {
+      const [yil, ay] = a.split("-");
+      try {
+        const r = await fetch(`https://api.aladhan.com/v1/calendar/${yil}/${+ay}` +
+          `?latitude=${NAMAZ.enlem}&longitude=${NAMAZ.boylam}&method=${NAMAZ.yontem}`, {cache:"no-store"});
+        if (!r.ok) throw new Error(r.status);
+        const d = await r.json();
+        const gunler = {};
+        (d.data || []).forEach(g => {
+          const [gg, aa, yy] = g.date.gregorian.date.split("-");
+          const saatler = {};
+          VAKIT_ADI.forEach(([k]) => { saatler[k] = (g.timings[k] || "").slice(0,5); });
+          gunler[`${yy}-${aa}-${gg}`] = saatler;
+        });
+        aylar[a] = gunler;
+      } catch { /* cevrimdisi: elde ne varsa onu goster */ }
+    }
+    Object.keys(aylar).forEach(a => { if (!ucAy().includes(a)) delete aylar[a]; });   // eski ayi dus
+    kaydet("n_aylar", aylar);
+  }
+  document.getElementById("n-konum").textContent = "Dayton, Ohio";
+  nRender();
+}
+
+const gunSaatleri = t => aylar[t.slice(0,7)]?.[t];
+
+function sonrakiVakit(){
+  const t = gunSaatleri(bugunIso);
+  if (!t) return null;
+  const simdiDk = bugun.getHours()*60 + bugun.getMinutes();
+  const su = new Date();
+  const anlikDk = su.getHours()*60 + su.getMinutes();
+  for (const [k, ad] of VAKIT_ADI) {
+    const [sa, dk] = (t[k] || "00:00").split(":").map(Number);
+    if (sa*60 + dk > anlikDk) return {k, ad, saat: t[k], kalan: sa*60 + dk - anlikDk};
+  }
+  return {k: "Imsak", ad: "İmsak", saat: (gunSaatleri(bugunIso) || {}).Imsak, kalan: null, yarin: true};
+}
+
+function nRender(){
+  const t = gunSaatleri(nSecili);
+  const d = new Date(nSecili + "T00:00:00");
+  document.getElementById("n-baslik").textContent = nSecili === bugunIso ? "Bugün" : `${d.getDate()} ${AY[d.getMonth()]}`;
+  document.getElementById("n-tarih").textContent =
+    `${d.getDate()} ${AY[d.getMonth()]} ${d.getFullYear()} · ${GUNU[(d.getDay()+6)%7]}`;
+
+  const sonraki = nSecili === bugunIso ? sonrakiVakit() : null;
+  document.getElementById("n-sonraki").innerHTML = sonraki && sonraki.kalan !== null
+    ? `<div><div class="eyebrow">${esc(sonraki.ad)} vaktine</div>
+         <div class="sayac-vakit">${Math.floor(sonraki.kalan/60)} sa ${sonraki.kalan%60} dk</div></div>
+       <div style="color:var(--muted);font-size:13px">saat ${esc(sonraki.saat)}</div>`
+    : (sonraki ? `<div style="font-size:13.5px;color:var(--ink-2)">Yatsı geçti. Sıradaki vakit yarın imsak.</div>` : "");
+
+  document.getElementById("n-vakitler").innerHTML = t
+    ? VAKIT_ADI.map(([k, ad]) => {
+        const aktif = sonraki && sonraki.k === k && sonraki.kalan !== null;
+        const gecti = nSecili === bugunIso && !aktif && sonraki && VAKIT_ADI.findIndex(v => v[0] === k) < VAKIT_ADI.findIndex(v => v[0] === sonraki.k);
+        return `<div class="vakit${aktif ? " simdi" : ""}${gecti ? " gecti" : ""}">
+          <span class="ad">${esc(ad)}</span>
+          ${aktif ? `<span class="rozet">sıradaki</span>` : ""}
+          <span class="sa">${esc(t[k] || "—")}</span></div>`;
+      }).join("")
+    : `<div class="empty">Bu günün vakitleri elde yok. İnternete bağlanıp Yenile'ye bas.</div>`;
+
+  takvimCiz();
+}
+
+function takvimCiz(){
+  const [yil, ay] = nAy.split("-").map(Number);
+  const ilk = new Date(yil, ay-1, 1), gunSayisi = new Date(yil, ay, 0).getDate();
+  const bosluk = (ilk.getDay()+6) % 7;
+  document.getElementById("n-ayad").textContent = `${AY[ay-1]} ${yil}`;
+  const mevcut = ucAy();
+  document.getElementById("n-geri").disabled = mevcut.indexOf(nAy) <= 0;
+  document.getElementById("n-ileri").disabled = mevcut.indexOf(nAy) >= mevcut.length - 1;
+  document.getElementById("n-takvim").innerHTML =
+    GUN.map(g => `<div class="bas">${g.slice(0,2)}</div>`).join("") +
+    "<div></div>".repeat(0) +
+    [...Array(bosluk)].map(() => `<div></div>`).join("") +
+    [...Array(gunSayisi)].map((_,i) => {
+      const t = `${nAy}-${String(i+1).padStart(2,"0")}`;
+      const var_ = !!gunSaatleri(t);
+      return `<button type="button" data-gun="${t}" ${var_ ? "" : "disabled"}
+        class="${t === bugunIso ? "bugun " : ""}${t === nSecili ? "secili" : ""}">${i+1}</button>`;
+    }).join("");
+}
+
+document.getElementById("n-takvim").addEventListener("click", e => {
+  const b = e.target.closest("button[data-gun]");
+  if (!b) return;
+  nSecili = b.dataset.gun;
+  nRender();
+});
+document.getElementById("n-geri").addEventListener("click", () => {
+  const m = ucAy(), i = m.indexOf(nAy);
+  if (i > 0) { nAy = m[i-1]; takvimCiz(); }
+});
+document.getElementById("n-ileri").addEventListener("click", () => {
+  const m = ucAy(), i = m.indexOf(nAy);
+  if (i < m.length - 1) { nAy = m[i+1]; takvimCiz(); }
+});
+document.getElementById("n-yenile").addEventListener("click", async e => {
+  e.target.dataset.yukleniyor = "1";
+  await namazYukle(true);
+  e.target.dataset.yukleniyor = "0";
+});
+setInterval(() => { if (!document.hidden && document.documentElement.dataset.app === "namaz") nRender(); }, 30000);
+
 /* ===== ALTIN ===== */
 function lotlar(){
   const lot = [];
@@ -1534,6 +1748,7 @@ if (sifirlamaModu) {                 // e-postadaki baglantiyla geldi: once yeni
   senkDurumYaz("bekliyor");
 }
 veriYukle().then(fiyatCek);
+namazYukle();
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { fiyatCek(); senkOku(); } });
 setInterval(() => { if (!document.hidden) senkOku(); }, 45000);
 
