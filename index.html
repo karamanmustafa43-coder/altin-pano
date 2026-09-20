@@ -464,7 +464,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 23:31";
+const SURUM = "20.09 23:35";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -1279,6 +1279,35 @@ sayacYaz();
 mRender();
 aRender();
 document.getElementById("surum").textContent = "sürüm " + SURUM;
+
+/* yeni surum varsa kendini tazele; onbellek inat ederse elle dugme goster */
+async function surumKontrol(){
+  try {
+    const r = await fetch("surum.json?t=" + Date.now(), {cache: "no-store"});
+    if (!r.ok) return;
+    const {surum} = await r.json();
+    if (!surum || surum === SURUM) { sessionStorage.removeItem("surum_deneme");
+      document.getElementById("surum").textContent = "sürüm " + SURUM; return; }
+    const deneme = +(sessionStorage.getItem("surum_deneme") || 0);
+    if (deneme < 3) {
+      sessionStorage.setItem("surum_deneme", deneme + 1);
+      document.getElementById("surum").textContent = "yeni sürüm yükleniyor…";
+      location.replace(location.pathname + "?s=" + encodeURIComponent(surum) + "&t=" + Date.now());
+      return;
+    }
+    document.getElementById("surum").innerHTML =
+      `sürüm ${esc(SURUM)} · <button type="button" id="guncelle" style="background:none;border:0;color:var(--acc-ink);
+        font:inherit;font-weight:600;text-decoration:underline;cursor:pointer">yeni sürüme geç</button>`;
+  } catch {}
+}
+document.addEventListener("click", e => {
+  if (e.target.id !== "guncelle") return;
+  sessionStorage.removeItem("surum_deneme");
+  location.replace(location.pathname + "?t=" + Date.now());
+});
+surumKontrol();
+setInterval(() => { if (!document.hidden) surumKontrol(); }, 300000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) surumKontrol(); });
 
 /* ---- giris / kayit / sifirlama / yeni sifre ---- */
 let mod = "giris";                                   // giris | kayit | sifirla | yeni
