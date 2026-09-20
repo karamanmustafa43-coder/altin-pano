@@ -21,6 +21,7 @@
     --ink:#0f1e1d; --ink-2:#475957; --muted:#788a88; --line:#dbe3e1;
     --acc:#0e7c7b; --acc-soft:#dcecec; --acc-ink:#0a5b5a;
     --up:#2c7a4b; --up-soft:#dcefe3; --warn:#9a6600; --warn-soft:#f6ecd6; --down:#a83228; --down-soft:#f7e2df;
+    --izgara:rgba(14,124,123,.07);
     color-scheme:light;
   }
   :root[data-app="altin"]{
@@ -34,6 +35,7 @@
       --ink:#e7efed; --ink-2:#a6b9b7; --muted:#7d908e; --line:#25322f;
       --acc:#3bb3b0; --acc-soft:#123230; --acc-ink:#8fd8d6;
       --up:#6cc48c; --up-soft:#12291d; --warn:#e0a94a; --warn-soft:#2b2214; --down:#e8877b; --down-soft:#2e1a17;
+      --izgara:rgba(59,179,176,.10);
       color-scheme:dark;
     }
     :root[data-app="altin"]{
@@ -50,11 +52,12 @@
   .wrap{max-width:720px;margin:0 auto;padding-block:0 26px;padding-left:16px;padding-right:16px}
   h1,h2{font-family:Archivo,system-ui,sans-serif;margin:0;text-wrap:balance}
   .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
-  .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .eyebrow{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600;
+    font-family:"IBM Plex Mono",monospace}
 
   header.top{padding-block:16px 12px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px}
   header.top .g{flex:1 1 auto;min-width:0}
-  h1{font-size:23px;font-weight:700;letter-spacing:-.015em;margin-top:2px}
+  h1{font-size:26px;font-weight:700;letter-spacing:-.025em;margin-top:1px;line-height:1.1}
   .sub{font-size:13px;color:var(--ink-2);margin-top:2px}
   .tazelik{font-size:12.5px;color:var(--muted);margin-top:3px}
   .tazelik.canli{color:var(--up);font-weight:600}
@@ -66,7 +69,10 @@
     padding:8px 12px;font:inherit;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer}
   button.yenile[data-yukleniyor="1"]{opacity:.5}
 
-  .hero{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+  .hero{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;
+    position:relative;overflow:hidden}
+  .hero .dalga{position:absolute;right:0;bottom:0;width:62%;max-width:280px;opacity:.5;pointer-events:none}
+  .hero > *{position:relative}
   .hero .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600}
   .hero .kz{font-family:"IBM Plex Mono",monospace;font-size:36px;font-weight:700;line-height:1.1;margin-top:4px}
   .hero .pct{font-size:16px;font-weight:600;margin-top:2px}
@@ -81,9 +87,15 @@
 
   section{margin-top:22px}
   .shead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
-  .shead h2{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .shead h2{font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+    font-family:"IBM Plex Mono",monospace;display:flex;align-items:center;gap:7px}
+  .shead h2::before{content:"";width:14px;height:2px;background:var(--acc);border-radius:1px;opacity:.85}
   .shead .meta{font-size:12.5px;color:var(--muted)}
   .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .panel.olcum{background-image:
+      repeating-linear-gradient(to right, var(--izgara) 0 1px, transparent 1px 100%),
+      repeating-linear-gradient(to bottom, var(--izgara) 0 1px, transparent 1px 100%);
+    background-size:18px 18px;background-position:-1px -1px}
   .seg{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px}
   .seg button{border:0;background:none;border-radius:999px;padding:5px 13px;font-size:12.5px;font-weight:600;
     color:var(--muted);cursor:pointer;font-family:inherit}
@@ -94,12 +106,20 @@
   .studio{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
   .ring{flex:0 0 auto;position:relative;width:124px;height:124px}
   .ring svg{display:block;transform:rotate(-90deg)}
+  .ring .dolu{transition:stroke-dasharray .7s cubic-bezier(.22,.9,.3,1)}
+  .ring .ic b{font-variant-numeric:tabular-nums}
   .ring .ic{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
   .ring .ic b{font-family:"IBM Plex Mono",monospace;font-size:20px;font-weight:600;display:block;line-height:1.1}
   .ring .ic span{font-size:11px;color:var(--muted)}
   .ctrl{flex:1 1 230px;min-width:210px}
-  .timer{font-family:"IBM Plex Mono",monospace;font-size:32px;font-weight:600;line-height:1.1}
+  .timer{font-family:"IBM Plex Mono",monospace;font-size:36px;font-weight:600;line-height:1.05;letter-spacing:-.02em;
+    display:flex;align-items:center;gap:9px}
   .timer.idle{color:var(--muted)}
+  .timer.aktif{color:var(--acc)}
+  .timer .nabiz{width:9px;height:9px;border-radius:50%;background:var(--acc);flex:0 0 auto;
+    animation:nabiz 1.6s ease-in-out infinite}
+  .timer.idle .nabiz{display:none}
+  @keyframes nabiz{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.82)}}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
   .streak{font-size:12.5px;color:var(--ink-2)}
   .streak b{color:var(--acc-ink)}
@@ -130,8 +150,9 @@
   [data-ders]{-webkit-touch-callout:none}
   .week{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
   .day{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 5px;min-height:96px}
-  .day.today{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
-  .day .dn{font-size:11px;font-weight:600;color:var(--muted);text-align:center;letter-spacing:.06em}
+  .day.today{border-color:var(--acc);background:linear-gradient(180deg,var(--acc-soft) 0 3px,var(--surface) 3px)}
+  .day .dn{font-size:10.5px;font-weight:600;color:var(--muted);text-align:center;letter-spacing:.14em;
+    font-family:"IBM Plex Mono",monospace;text-transform:uppercase}
   .day.today .dn{color:var(--acc-ink)}
   .slot{margin-top:5px;background:var(--acc-soft);color:var(--acc-ink);border-radius:7px;padding:4px 3px;font-size:10.5px;font-weight:600;text-align:center}
   .slot em{display:block;font-style:normal;font-weight:400;font-size:10px;opacity:.85;line-height:1.35;font-family:"IBM Plex Mono",monospace}
@@ -178,8 +199,9 @@
   button.go.big{padding:12px 22px;font-size:16px;border-radius:12px}
   button.go.stop{background:var(--down)}
   .quick{display:flex;gap:6px;flex-wrap:wrap}
-  .quick button{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;
-    font-size:13px;font-weight:600;cursor:pointer;color:var(--ink-2)}
+  .quick button{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:7px 13px;
+    font-size:13px;font-weight:600;cursor:pointer;color:var(--ink-2);transition:transform .12s ease, background .15s ease}
+  .quick button:active{transform:scale(.96)}
   #c-ders-rozet button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#fff}
   .x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:16px;padding:4px 8px}
   :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
@@ -195,7 +217,10 @@
     padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));backdrop-filter:saturate(1.2) blur(8px)}
   nav.tabs button{flex:1 1 0;background:none;border:0;border-radius:12px;padding:7px 4px;cursor:pointer;
     color:var(--muted);font-size:11.5px;font-weight:600;font-family:inherit;display:grid;gap:3px;justify-items:center}
-  nav.tabs button[aria-selected="true"]{color:var(--acc-ink);background:var(--acc-soft)}
+  nav.tabs button{position:relative}
+  nav.tabs button[aria-selected="true"]{color:var(--acc-ink)}
+  nav.tabs button[aria-selected="true"]::before{content:"";position:absolute;top:-6px;left:50%;transform:translateX(-50%);
+    width:30px;height:2.5px;border-radius:2px;background:var(--acc)}
   nav.tabs svg{display:block}
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -220,7 +245,7 @@
 
   <section>
     <div class="shead"><h2>Çalışma</h2><div class="meta" id="c-meta">bu hafta</div></div>
-    <div class="panel">
+    <div class="panel olcum">
       <div class="studio">
         <div class="ring" id="ring"></div>
         <div class="ctrl">
@@ -374,7 +399,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 18:47";
+const SURUM = "20.09 19:20";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -625,10 +650,17 @@ function seri(){
 function mCalisma(){
   const gunler = sonGunler(), toplam = gunler.reduce((a,x) => a + x.dk, 0);
   const oran = Math.min(1, hedefDk ? toplam/hedefDk : 0), R = 52, C = 2*Math.PI*R;
+  const tikler = [...Array(12)].map((_,k) => {
+    const a2 = k * 30 * Math.PI / 180, ic = R + 9, dis = R + (k % 3 === 0 ? 14 : 12);
+    return `<line x1="${(62+Math.cos(a2)*ic).toFixed(1)}" y1="${(62+Math.sin(a2)*ic).toFixed(1)}"
+                  x2="${(62+Math.cos(a2)*dis).toFixed(1)}" y2="${(62+Math.sin(a2)*dis).toFixed(1)}"
+                  stroke="var(--muted)" stroke-width="${k % 3 === 0 ? 1.6 : 1}" opacity="${k % 3 === 0 ? .55 : .3}"></line>`;
+  }).join("");
   document.getElementById("ring").innerHTML =
-    `<svg viewBox="0 0 124 124" width="100%" height="100%">
-      <circle cx="62" cy="62" r="${R}" fill="none" stroke="var(--line)" stroke-width="11"></circle>
-      <circle cx="62" cy="62" r="${R}" fill="none" stroke="var(--acc)" stroke-width="11" stroke-linecap="round"
+    `<svg viewBox="-6 -6 136 136" width="100%" height="100%">
+      ${tikler}
+      <circle cx="62" cy="62" r="${R}" fill="none" stroke="var(--line)" stroke-width="10"></circle>
+      <circle class="dolu" cx="62" cy="62" r="${R}" fill="none" stroke="var(--acc)" stroke-width="10" stroke-linecap="round"
         stroke-dasharray="${(C*oran).toFixed(1)} ${C.toFixed(1)}"></circle></svg>
     <div class="ic"><b>${toplam ? sureMetni(toplam) : "0 dk"}</b><span>hedefin %${Math.round(oran*100)}</span></div>`;
 
@@ -709,11 +741,12 @@ function mRender(){ mBaslik(); haftaProgram(); mCalisma(); mGorevler(); mNotlar(
 /* sayac */
 function sayacYaz(){
   const el = document.getElementById("timer"), b = document.getElementById("sayac-btn");
-  if (!sayac) { el.textContent = "00:00"; el.classList.add("idle"); b.textContent = "Başlat"; b.classList.remove("stop");
+  if (!sayac) { el.textContent = "00:00"; el.classList.add("idle"); el.classList.remove("aktif");
+                b.textContent = "Başlat"; b.classList.remove("stop");
                 document.getElementById("sayac-iptal").hidden = true; return; }
   const s = Math.floor((Date.now() - sayac.bas)/1000);
-  el.textContent = (s >= 3600 ? iki(Math.floor(s/3600))+":" : "") + iki(Math.floor(s/60)%60) + ":" + iki(s%60);
-  el.classList.remove("idle"); b.textContent = "Bitir ve kaydet"; b.classList.add("stop");
+  el.innerHTML = `<span class="nabiz"></span><span>${(s >= 3600 ? iki(Math.floor(s/3600))+":" : "") + iki(Math.floor(s/60)%60) + ":" + iki(s%60)}</span>`;
+  el.classList.remove("idle"); el.classList.add("aktif"); b.textContent = "Bitir ve kaydet"; b.classList.add("stop");
   document.getElementById("sayac-iptal").hidden = false;
 }
 document.getElementById("sayac-btn").addEventListener("click", () => {
@@ -957,6 +990,17 @@ function aRender(){
   document.getElementById("kz").textContent = d.gram ? (d.kz>=0?"▲ ":"▼ ") + tl(d.kz, true) : "—";
   document.getElementById("pct").className = "pct " + yon;
   document.getElementById("pct").textContent = d.gram ? yzd(d.yuzde) : "işlem ekleyince hesaplanır";
+  const sparkVeri = gecmis.slice(-14).map(x => x.a);
+  const eskiDalga = document.querySelector(".hero .dalga");
+  if (eskiDalga) eskiDalga.remove();
+  if (sparkVeri.length > 2) {
+    const W2 = 220, H2 = 60, lo2 = Math.min(...sparkVeri), hi2 = Math.max(...sparkVeri), f2 = (hi2 - lo2) || 1;
+    const nokta = sparkVeri.map((v,i) => `${(i*W2/(sparkVeri.length-1)).toFixed(1)},${(H2 - 6 - (v-lo2)/f2*(H2-16)).toFixed(1)}`);
+    document.querySelector(".hero").insertAdjacentHTML("afterbegin",
+      `<svg class="dalga" viewBox="0 0 ${W2} ${H2}" preserveAspectRatio="none" aria-hidden="true">
+         <path d="M${nokta.join(" L")} L${W2},${H2} L0,${H2} Z" fill="var(--acc-soft)"></path>
+         <path d="M${nokta.join(" L")}" fill="none" stroke="var(--acc)" stroke-width="1.6" opacity=".55"></path></svg>`);
+  }
   document.getElementById("a-alt").textContent = d.gram
     ? `${d.gram.toLocaleString("tr-TR")} gram · ortalama maliyet ${tl(d.ort)} / gram` : "Aşağıdan ilk alımını ekle.";
   const kzUsd = fiyat && d.gram ? d.deger/fiyat.kur - d.mUsd : 0, reel = d.enf ? (d.deger/d.enf - 1)*100 : 0;
