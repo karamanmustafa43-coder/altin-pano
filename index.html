@@ -110,6 +110,14 @@
   .dg{font-size:12px;font-weight:600;padding:4px 9px;border-radius:999px;background:var(--acc-soft);color:var(--acc-ink)}
   .dg em{font-style:normal;font-weight:400;opacity:.8}
 
+  .dsat{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--line)}
+  .dsat:last-child{border-bottom:0}
+  .dsat input.kod{flex:1 1 130px;min-width:110px}
+  .dsat input.saat{flex:0 0 96px}
+  .gunler{display:flex;gap:3px}
+  .gunler button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);
+    color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;padding:0;font-family:inherit}
+  .gunler button[aria-pressed="true"]{background:var(--acc-soft);border-color:var(--acc);color:var(--acc-ink)}
   .week{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
   .day{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 5px;min-height:96px}
   .day.today{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
@@ -233,6 +241,10 @@
   <section id="s-program">
     <div class="shead"><h2>Bu hafta</h2><div class="meta" id="donem-meta"></div></div>
     <div class="week" id="week"></div>
+    <div style="text-align:right;margin-top:8px">
+      <button class="yenile" id="ders-duzenle" type="button">Dersleri düzenle</button>
+    </div>
+    <div class="panel" id="ders-editor" hidden style="margin-top:8px"></div>
   </section>
 
   <section>
@@ -481,8 +493,43 @@ document.getElementById("t-altin").addEventListener("click", () => sekme("altin"
 const dersAdlari = () => (prog?.dersler || []).map(d => d.kod);
 function seceneklerDoldur(){
   const ek = ["Fourier","Seminer","Diğer"];
-  document.getElementById("c-ders").innerHTML = [...dersAdlari(), ...ek].map(d => `<option>${esc(d)}</option>`).join("");
-  document.getElementById("g-ders").innerHTML = `<option value="">Ders yok</option>` + dersAdlari().map(d => `<option>${esc(d)}</option>`).join("");
+  const c = document.getElementById("c-ders"), g = document.getElementById("g-ders");
+  const oncekiC = c.value, oncekiG = g.value;
+  const yeni = `<option value="__yeni">+ Yeni ders ekle…</option>`;
+  c.innerHTML = [...dersAdlari(), ...ek].map(d => `<option>${esc(d)}</option>`).join("") + yeni;
+  g.innerHTML = `<option value="">Ders yok</option>` + dersAdlari().map(d => `<option>${esc(d)}</option>`).join("") + yeni;
+  if ([...c.options].some(o => o.value === oncekiC)) c.value = oncekiC;
+  if ([...g.options].some(o => o.value === oncekiG)) g.value = oncekiG;
+}
+
+/* --- ders yonetimi --- */
+function dersEkle(kod){
+  prog = prog || {donem:{ad:"Dönem"}, dersler:[]};
+  prog.dersler = prog.dersler || [];
+  prog.dersler.push({kod: kod || "Yeni ders", gunler: [], saat: ""});
+  dersKaydet();
+  return prog.dersler.length - 1;
+}
+function dersKaydet(){
+  kaydet("m_prog", prog); senkYaz("prog"); seceneklerDoldur(); haftaProgram(); dersEditor();
+}
+function dersEditor(){
+  const el = document.getElementById("ders-editor");
+  if (el.hidden) return;
+  const d = prog?.dersler || [];
+  el.innerHTML = (d.length ? d.map((x,i) => `<div class="dsat" data-i="${i}">
+      <input class="kod" type="text" value="${esc(x.kod)}" aria-label="Ders adı">
+      <div class="gunler" role="group" aria-label="Günler">${GUN.slice(0,5).map((g,j) =>
+        `<button type="button" data-gun="${j}" aria-pressed="${(x.gunler||[]).includes(j)}">${g}</button>`).join("")}</div>
+      <input class="saat" type="text" value="${esc(x.saat||"")}" placeholder="09:00" aria-label="Saat">
+      <button class="x" data-dsil="${i}" aria-label="Dersi sil">×</button>
+    </div>`).join("") : `<div class="empty">Ders yok.</div>`) +
+    `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+       <button class="go" id="ders-ekle" type="button">+ Ders ekle</button>
+       <button class="yenile" id="ders-kapat" type="button">Bitti</button>
+     </div>
+     <div style="font-size:11.5px;color:var(--muted);margin-top:8px">
+       Gün seçmezsen ders haftalık programda görünmez, yalnızca çalışma kaydında seçilebilir.</div>`;
 }
 
 function mBaslik(){
@@ -634,6 +681,51 @@ document.getElementById("sayac-iptal").addEventListener("click", () => {
 function calismaEkle(ders, dk){
   calisma.push({id: Date.now().toString(36), tarih: bugunIso, ders, dk, saat: new Date().toTimeString().slice(0,5)}); kaydet("m_calisma", calisma); senkYaz("calisma"); mCalisma();
 }
+document.getElementById("ders-duzenle").addEventListener("click", () => {
+  const el = document.getElementById("ders-editor");
+  el.hidden = !el.hidden;
+  document.getElementById("ders-duzenle").textContent = el.hidden ? "Dersleri düzenle" : "Kapat";
+  dersEditor();
+});
+document.getElementById("ders-editor").addEventListener("click", e => {
+  if (e.target.id === "ders-ekle") { dersEkle(); document.querySelector("#ders-editor .dsat:last-of-type .kod")?.select(); return; }
+  if (e.target.id === "ders-kapat") { document.getElementById("ders-duzenle").click(); return; }
+  const sil = e.target.closest("[data-dsil]");
+  if (sil) { prog.dersler.splice(+sil.dataset.dsil, 1); dersKaydet(); return; }
+  const gun = e.target.closest("button[data-gun]");
+  if (gun) {
+    const i = +gun.closest(".dsat").dataset.i, j = +gun.dataset.gun;
+    const liste = prog.dersler[i].gunler || (prog.dersler[i].gunler = []);
+    const yer = liste.indexOf(j);
+    yer === -1 ? liste.push(j) : liste.splice(yer, 1);
+    liste.sort();
+    dersKaydet();
+  }
+});
+document.getElementById("ders-editor").addEventListener("change", e => {
+  const sat = e.target.closest(".dsat");
+  if (!sat) return;
+  const i = +sat.dataset.i;
+  if (e.target.classList.contains("kod")) {
+    const eski = prog.dersler[i].kod, yeniAd = e.target.value.trim() || eski;
+    prog.dersler[i].kod = yeniAd;
+    calisma = calisma.map(c => c.ders === eski ? {...c, ders: yeniAd} : c);       // gecmis kayitlar da yeni adi alsin
+    gorevler = gorevler.map(g => g.ders === eski ? {...g, ders: yeniAd} : g);
+    kaydet("m_calisma", calisma); kaydet("m_gorevler", gorevler);
+    senkYaz("calisma"); senkYaz("gorevler"); mCalisma(); mGorevler();
+  } else if (e.target.classList.contains("saat")) prog.dersler[i].saat = e.target.value.trim();
+  dersKaydet();
+});
+function yeniDersSor(secim){
+  const ad = prompt("Yeni dersin adı:");
+  if (ad && ad.trim()) {
+    dersEkle(ad.trim());
+    secim.value = ad.trim();
+  } else secim.selectedIndex = 0;
+}
+document.getElementById("c-ders").addEventListener("change", e => { if (e.target.value === "__yeni") yeniDersSor(e.target); });
+document.getElementById("g-ders").addEventListener("change", e => { if (e.target.value === "__yeni") yeniDersSor(e.target); });
+
 document.getElementById("c-dk").addEventListener("click", e => {
   const b = e.target.closest("button[data-dk]");
   if (b) calismaEkle(document.getElementById("c-ders").value, +b.dataset.dk);
