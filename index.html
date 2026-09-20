@@ -464,7 +464,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 23:35";
+const SURUM = "20.09 23:50";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -488,8 +488,35 @@ const SB = {
   url: "https://ytjlbclwihcoarconuxp.supabase.co",
   key: "sb_publishable_Ve4xLucFlCwWjDab_A-m1g_MhU5SaDN"   // yayimlanabilir anahtar: istemci kodunda durmasi normaldir
 };
+const LISTELER = ["gorevler", "calisma", "notlar", "islemler"];
+const simdi = () => new Date().toISOString();
+const canli = l => (Array.isArray(l) ? l.filter(x => !x.s) : l);
+const yeniKimlik = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+function kimlikle(liste){                      // eski kayitlara kimlik ve damga ver
+  return (liste || []).map(x => ({...x, id: x.id ?? yeniKimlik(), g: x.g ?? "1970-01-01T00:00:00.000Z"}));
+}
+function birlestir(yerel, uzak){               // her kayitta daha yeni damga kazanir
+  const m = new Map();
+  [...(Array.isArray(uzak) ? uzak : []), ...(Array.isArray(yerel) ? yerel : [])].forEach(x => {
+    if (!x || x.id === undefined) return;
+    const v = m.get(x.id);
+    if (!v || (x.g || "") >= (v.g || "")) m.set(x.id, x);
+  });
+  const esik = new Date(Date.now() - 30 * 864e5).toISOString();   // eski silme isaretlerini temizle
+  return [...m.values()].filter(x => !(x.s && (x.g || "") < esik));
+}
+
 let oturum = null;
 try { oturum = JSON.parse(localStorage.getItem("sb_oturum") || "null"); } catch {}
+
+function listeAl(ad){ return {gorevler, calisma, notlar, islemler}[ad]; }
+function listeYaz(ad, v){
+  if (ad === "gorevler") { gorevler = v; kaydet("m_gorevler", v); }
+  else if (ad === "calisma") { calisma = v; kaydet("m_calisma", v); }
+  else if (ad === "notlar") { notlar = v; kaydet("m_notlar", v); }
+  else if (ad === "islemler") { islemler = v; kaydet("a_islemler", v); }
+}
 
 function sbBas(){
   const jeton = oturum?.access_token || SB.key;
@@ -572,8 +599,21 @@ function senkYaz(ad){
     senkDurumYaz("yaziliyor");
     try {
       await jetonTazele();
+      if (LISTELER.includes(ad)) {                       // sunucudaki kopyayla kayit kayit birlestir
+        const r0 = await fetch(SB.url + "/rest/v1/veri?select=icerik&anahtar=eq." + ad,
+                               {headers: sbBas(), cache: "no-store"});
+        if (r0.ok) {
+          const d0 = await r0.json();
+          const uzak = d0[0]?.icerik?.veri;
+          if (Array.isArray(uzak)) {
+            listeYaz(ad, birlestir(listeAl(ad), uzak));
+            mRender(); aRender();
+          }
+        }
+      }
       const r = await fetch(SB.url + "/rest/v1/veri?on_conflict=user_id,anahtar", {method:"POST", headers: {...sbBas(), Prefer:"resolution=merge-duplicates"},
-        body: JSON.stringify([{anahtar: ad, icerik: {veri: yerel, yerelZaman: senkZaman[ad]}}])});
+        body: JSON.stringify([{anahtar: ad, icerik: {veri: LISTELER.includes(ad) ? listeAl(ad) : yerel,
+                                                     yerelZaman: senkZaman[ad]}}])});
       if (!r.ok) throw new Error(r.status);
       senkDurumYaz("esit");
     } catch { senkDurumYaz("hata"); }
@@ -594,8 +634,11 @@ async function senkOku(){
       if (tohumlanan.has(ad)) return;                              // bu acilista baglantidan geldi: yerel kazanir
       const v = st.icerik?.veri;
       if (v === undefined) return;
-      const yerelVar = {gorevler, calisma, notlar, islemler, takvim}[ad];   // sayac/ayarlar/prog nesne
-      if (Array.isArray(v) && !v.length && Array.isArray(yerelVar) && yerelVar.length) return;  // bos sunucu dolu yereli silmesin
+      if (LISTELER.includes(ad)) {                                  // listeler kayit kayit birlesir
+        listeYaz(ad, birlestir(listeAl(ad), v));
+        senkZaman[ad] = sunucuZ; degisti = true;
+        return;
+      }
       if (ad === "gorevler") { gorevler = v; kaydet("m_gorevler", v); }
       else if (ad === "calisma") { calisma = v; kaydet("m_calisma", v); }
       else if (ad === "notlar") { notlar = v; kaydet("m_notlar", v); }
@@ -768,11 +811,11 @@ function haftaProgram(){
 const sonGunler = () => [...Array(7)].map((_,i) => {
   const d = new Date(bugun); d.setDate(d.getDate() - 6 + i);
   const g = iso(d);
-  return {g, gun: GUN[(d.getDay()+6)%7], dk: calisma.filter(c => c.tarih === g).reduce((a,c) => a + (c.dk||0), 0)};
+  return {g, gun: GUN[(d.getDay()+6)%7], dk: canli(calisma).filter(c => c.tarih === g).reduce((a,c) => a + (c.dk||0), 0)};
 });
 
 function seri(){
-  const set = new Set(calisma.filter(c => c.dk).map(c => c.tarih));
+  const set = new Set(canli(calisma).filter(c => c.dk).map(c => c.tarih));
   let n = 0, d = new Date(bugun);
   if (!set.has(iso(d))) d.setDate(d.getDate() - 1);
   while (set.has(iso(d))) { n++; d.setDate(d.getDate() - 1); }
@@ -797,7 +840,7 @@ function mCalisma(){
     <div class="ic"><b>${toplam ? sureMetni(toplam) : "0 dk"}</b><span>hedefin %${Math.round(oran*100)}</span></div>`;
 
   const dersDk = {};
-  calisma.filter(c => gunler.some(g => g.g === c.tarih)).forEach(c => { dersDk[c.ders||"Diğer"] = (dersDk[c.ders||"Diğer"]||0) + (c.dk||0); });
+  canli(calisma).filter(c => gunler.some(g => g.g === c.tarih)).forEach(c => { dersDk[c.ders||"Diğer"] = (dersDk[c.ders||"Diğer"]||0) + (c.dk||0); });
   document.getElementById("dagilim").innerHTML = Object.entries(dersDk).sort((a,b) => b[1]-a[1])
     .map(([d,dk]) => `<span class="dg" data-ders="${esc(d)}">${esc(d)} <em>${sureMetni(dk)}</em></span>`).join("");
 
@@ -807,7 +850,7 @@ function mCalisma(){
   document.getElementById("hedef-v").textContent = sureMetni(hedefDk);
   document.getElementById("c-meta").textContent = `hedef ${sureMetni(hedefDk)} · bu hafta ${sureMetni(toplam)}`;
 
-  const son = calisma.slice(-8).reverse();
+  const son = canli(calisma).slice(-8).reverse();
   document.getElementById("c-kayitlar").innerHTML = son.length
     ? `<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:8px">
         <div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600">Son kayıtlar</div>` +
@@ -815,7 +858,7 @@ function mCalisma(){
           <span style="flex:0 0 52px;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:12.5px">${c.tarih === bugunIso ? (c.saat || "bugün") : c.tarih.slice(8)+"."+c.tarih.slice(5,7)}</span>
           <span style="flex:1 1 auto">${esc(c.ders || "Diğer")}</span>
           <span style="font-family:'IBM Plex Mono',monospace;font-weight:600">${sureMetni(c.dk || 0)}</span>
-          <button class="x" data-csil="${esc(c.id ?? ("ix" + (calisma.length - 1 - i)))}" aria-label="Bu kaydı sil">×</button>
+          <button class="x" data-csil="${esc(c.id ?? ("ix" + (canli(calisma).length - 1 - i)))}" aria-label="Bu kaydı sil">×</button>
         </div>`).join("") + `</div>`
     : "";
 
@@ -832,8 +875,8 @@ function mCalisma(){
 }
 
 function mGorevler(){
-  const acik = gorevler.filter(g => g.durum !== "bitti").sort((a,b) => (a.teslim||"9999") < (b.teslim||"9999") ? -1 : 1);
-  const hepsi = [...acik, ...gorevler.filter(g => g.durum === "bitti").slice(0,3)];
+  const acik = canli(gorevler).filter(g => g.durum !== "bitti").sort((a,b) => (a.teslim||"9999") < (b.teslim||"9999") ? -1 : 1);
+  const hepsi = [...acik, ...canli(gorevler).filter(g => g.durum === "bitti").slice(0,3)];
   document.getElementById("gorev-meta").textContent = acik.length ? acik.length + " açık" : "hepsi tamam";
   document.getElementById("gorevler").innerHTML = hepsi.length ? hepsi.map(g => {
     const n = g.teslim ? gunFark(g.teslim) : null;
@@ -860,8 +903,9 @@ function mGorevler(){
 }
 
 function mNotlar(){
-  document.getElementById("not-meta").textContent = notlar.length ? notlar.length + " not" : "";
-  document.getElementById("notlar").innerHTML = notlar.length ? notlar.slice(0,8).map(n =>
+  const notlarC = canli(notlar);
+  document.getElementById("not-meta").textContent = notlarC.length ? notlarC.length + " not" : "";
+  document.getElementById("notlar").innerHTML = notlarC.length ? notlarC.slice(0,8).map(n =>
     `<div class="note"><div class="m">${esc(n.metin)}</div>
       <div class="d"><span>${esc(n.tarih ? n.tarih.slice(8)+"."+n.tarih.slice(5,7) : "")}</span>
       <button class="x" data-notsil="${esc(n.id)}" aria-label="Notu sil">×</button></div></div>`).join("")
@@ -892,15 +936,15 @@ document.getElementById("sayac-iptal").addEventListener("click", () => {
   clearInterval(tik); sayac = null; try{ localStorage.removeItem("m_sayac"); }catch{} senkYaz("sayac"); sayacYaz();
 });
 function calismaEkle(ders, dk){
-  calisma.push({id: Date.now().toString(36), tarih: bugunIso, ders, dk, saat: new Date().toTimeString().slice(0,5)}); kaydet("m_calisma", calisma); senkYaz("calisma"); mCalisma();
+  calisma.push({id: yeniKimlik(), g: simdi(), tarih: bugunIso, ders, dk, saat: new Date().toTimeString().slice(0,5)}); kaydet("m_calisma", calisma); senkYaz("calisma"); mCalisma();
 }
 /* --- derse uzun basma / sag tik menusu --- */
 function dersAdiDegistir(eski){
   const yeniAd = (prompt("Dersin yeni adı:", eski) || "").trim();
   if (!yeniAd || yeniAd === eski) return;
   if (prog?.dersler) prog.dersler = prog.dersler.map(d => d.kod === eski ? {...d, kod: yeniAd} : d);
-  calisma = calisma.map(c => c.ders === eski ? {...c, ders: yeniAd} : c);
-  gorevler = gorevler.map(g => g.ders === eski ? {...g, ders: yeniAd} : g);
+  calisma = calisma.map(c => c.ders === eski ? {...c, ders: yeniAd, g: simdi()} : c);
+  gorevler = gorevler.map(g => g.ders === eski ? {...g, ders: yeniAd, g: simdi()} : g);
   kaydet("m_calisma", calisma); kaydet("m_gorevler", gorevler);
   senkYaz("calisma"); senkYaz("gorevler");
   dersKaydet(); mCalisma(); mGorevler();
@@ -991,8 +1035,8 @@ document.getElementById("ders-editor").addEventListener("change", e => {
   if (e.target.classList.contains("kod")) {
     const eski = prog.dersler[i].kod, yeniAd = e.target.value.trim() || eski;
     prog.dersler[i].kod = yeniAd;
-    calisma = calisma.map(c => c.ders === eski ? {...c, ders: yeniAd} : c);       // gecmis kayitlar da yeni adi alsin
-    gorevler = gorevler.map(g => g.ders === eski ? {...g, ders: yeniAd} : g);
+    calisma = calisma.map(c => c.ders === eski ? {...c, ders: yeniAd, g: simdi()} : c);       // gecmis kayitlar da yeni adi alsin
+    gorevler = gorevler.map(g => g.ders === eski ? {...g, ders: yeniAd, g: simdi()} : g);
     kaydet("m_calisma", calisma); kaydet("m_gorevler", gorevler);
     senkYaz("calisma"); senkYaz("gorevler"); mCalisma(); mGorevler();
   } else {
@@ -1033,9 +1077,8 @@ document.getElementById("c-kayitlar").addEventListener("click", e => {
   const b = e.target.closest("[data-csil]");
   if (!b) return;
   const k = b.dataset.csil;
-  calisma = k.startsWith("ix")
-    ? calisma.filter((c,i) => i !== +k.slice(2))       // kimliksiz eski kayitlar
-    : calisma.filter(c => c.id !== k);
+  calisma = calisma.map((c,i) => (k.startsWith("ix") ? i === +k.slice(2) : c.id === k)
+    ? {...c, s: 1, g: simdi()} : c);                   // silme isareti (diger cihazda da silinsin)
   kaydet("m_calisma", calisma); senkYaz("calisma"); mCalisma();
 });
 
@@ -1049,33 +1092,35 @@ document.getElementById("gorev-form").addEventListener("submit", e => {
   e.preventDefault();
   const baslik = document.getElementById("g-baslik").value.trim();
   if (!baslik) return;
-  gorevler.push({id: Date.now().toString(36), baslik, ders: document.getElementById("g-ders").value,
+  gorevler.push({id: yeniKimlik(), g: simdi(), baslik, ders: document.getElementById("g-ders").value,
                  teslim: document.getElementById("g-teslim").value, durum: "acik"});
   kaydet("m_gorevler", gorevler); senkYaz("gorevler"); e.target.reset(); mGorevler();
 });
 document.getElementById("gorevler").addEventListener("click", e => {
   const sil = e.target.closest("[data-sil]");
-  if (sil) { gorevler = gorevler.filter(g => g.id !== sil.dataset.sil); kaydet("m_gorevler", gorevler); senkYaz("gorevler"); mGorevler(); return; }
+  if (sil) { gorevler = gorevler.map(g => g.id === sil.dataset.sil ? {...g, s: 1, g: simdi()} : g);
+             kaydet("m_gorevler", gorevler); senkYaz("gorevler"); mGorevler(); return; }
   const t = e.target.closest(".tick");
   if (!t) return;
   const id = t.closest("li").dataset.id, sira = {acik:"yapiliyor", yapiliyor:"bitti", bitti:"acik"};
-  gorevler = gorevler.map(g => g.id === id ? {...g, durum: sira[g.durum] || "yapiliyor"} : g);
+  gorevler = gorevler.map(g => g.id === id ? {...g, durum: sira[g.durum] || "yapiliyor", g: simdi()} : g);
   kaydet("m_gorevler", gorevler); senkYaz("gorevler"); mGorevler();
 });
 document.getElementById("not-form").addEventListener("submit", e => {
   e.preventDefault();
   const metin = document.getElementById("n-metin").value.trim();
   if (!metin) return;
-  notlar.unshift({id: Date.now().toString(36), metin, tarih: bugunIso});
+  notlar.unshift({id: yeniKimlik(), g: simdi(), metin, tarih: bugunIso});
   kaydet("m_notlar", notlar); senkYaz("notlar"); document.getElementById("n-metin").value = ""; mNotlar();
 });
 document.getElementById("notlar").addEventListener("click", e => {
   const s = e.target.closest("[data-notsil]");
   if (!s) return;
-  notlar = notlar.filter(n => n.id !== s.dataset.notsil); kaydet("m_notlar", notlar); senkYaz("notlar"); mNotlar();
+  notlar = notlar.map(n => n.id === s.dataset.notsil ? {...n, s: 1, g: simdi()} : n); kaydet("m_notlar", notlar); senkYaz("notlar"); mNotlar();
 });
 document.getElementById("disa-aktar").addEventListener("click", async e => {
-  const veri = JSON.stringify({gorevler, calisma: calisma.slice(-60), notlar, islemler}, null, 1);
+  const veri = JSON.stringify({gorevler: canli(gorevler), calisma: canli(calisma).slice(-60),
+                              notlar: canli(notlar), islemler: canli(islemler)}, null, 1);
   try { await navigator.clipboard.writeText(veri); e.target.textContent = "Kopyalandı ✓";
         setTimeout(() => e.target.textContent = "Verileri kopyala", 2000); }
   catch { prompt("Kopyala:", veri); }
@@ -1084,7 +1129,7 @@ document.getElementById("disa-aktar").addEventListener("click", async e => {
 /* ===== ALTIN ===== */
 function lotlar(){
   const lot = [];
-  [...islemler].sort((a,b) => a.tarih < b.tarih ? -1 : 1).forEach(i => {
+  [...canli(islemler)].sort((a,b) => a.tarih < b.tarih ? -1 : 1).forEach(i => {
     if (i.tur === "satim") {
       const top = lot.reduce((a,l) => a + l.gram, 0), oran = top ? 1 - i.gram/top : 0;
       lot.forEach(l => { l.gram *= oran; l.maliyet *= oran; });
@@ -1164,7 +1209,7 @@ function aRender(){
       <span class="dg2" style="flex:0 0 118px">${tl(v)}<div style="font-size:12px;font-weight:600" class="${fark>=0?"up":"down"}">${tl(fark,true)}</div></span></div>`;
   }).join("") : `<div class="empty">İşlem ekleyince dolar ve enflasyonla karşılaştırırım.</div>`;
 
-  const liste = [...islemler].sort((a,b) => a.tarih < b.tarih ? 1 : -1);
+  const liste = [...canli(islemler)].sort((a,b) => a.tarih < b.tarih ? 1 : -1);
   document.getElementById("islem-meta").textContent = liste.length ? liste.length + " işlem" : "";
   document.getElementById("islemler").innerHTML = liste.length ? liste.map((i,ix) => `<tr>
     <td>${kisaT(i.tarih)}</td><td><span class="tur ${i.tur==="satim"?"satim":""}">${i.tur==="satim"?"Satım":"Alım"}</span></td>
@@ -1257,20 +1302,22 @@ document.getElementById("islem-form").addEventListener("submit", e => {
              tur: document.getElementById("i-tur").value, gram: +document.getElementById("i-gram").value,
              birim_fiyat_tl: +document.getElementById("i-fiyat").value};
   if (!k.tarih || !k.gram || !k.birim_fiyat_tl) return;
-  islemler.push(k); kaydet("a_islemler", islemler); senkYaz("islemler");
+  islemler.push({...k, g: simdi()}); kaydet("a_islemler", islemler); senkYaz("islemler");
   document.getElementById("i-gram").value = ""; document.getElementById("i-fiyat").value = "";
   aRender();
 });
 document.getElementById("islemler").addEventListener("click", e => {
   const s = e.target.closest("[data-isil]");
   if (!s) return;
-  islemler = islemler.filter((i,ix) => String(i.id ?? ix) !== s.dataset.isil);
+  islemler = islemler.map((i,ix) => String(i.id ?? ix) === s.dataset.isil ? {...i, s: 1, g: simdi()} : i);
   kaydet("a_islemler", islemler); senkYaz("islemler"); aRender();
 });
 
 /* ===== acilis ===== */
 document.getElementById("i-tarih").value = bugunIso;
 document.getElementById("g-teslim").value = "";
+gorevler = kimlikle(gorevler); calisma = kimlikle(calisma);
+notlar = kimlikle(notlar); islemler = kimlikle(islemler);
 seceneklerDoldur();
 sekme(yukle("aktif_sekme", "merkez"));
 sayac = yukle("m_sayac", null);
