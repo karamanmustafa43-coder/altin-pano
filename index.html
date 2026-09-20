@@ -234,6 +234,8 @@
     display:grid;place-items:center;font-weight:700;font-size:13px;flex:0 0 auto}
   .ghesap .eposta{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px}
   .ghesap .unut{color:var(--muted);font-size:15px;padding:0 4px}
+  .avatar{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--acc-soft);
+    color:var(--acc-ink);font-weight:700;font-size:15px;cursor:pointer;flex:0 0 auto;font-family:inherit}
   .kullanici{font-size:11.5px;color:var(--muted)}
   .kullanici button{background:none;border:0;color:var(--acc-ink);font:inherit;font-size:11.5px;
     font-weight:600;cursor:pointer;padding:0 2px;text-decoration:underline}
@@ -292,7 +294,10 @@
       <div class="sub mono" id="m-tarih">—</div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex:0 0 auto">
-      <button class="yenile" id="m-yenile" type="button">Yenile</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="yenile" id="m-yenile" type="button">Yenile</button>
+        <button class="avatar" data-hesapmenu type="button" aria-label="Hesap">·</button>
+      </div>
       <div class="countdown" id="m-geri" hidden><b>—</b><span>—</span></div>
     </div>
   </header>
@@ -380,7 +385,10 @@
       <h1>Altın Panosu</h1>
       <div class="tazelik" id="tazelik">fiyat alınıyor…</div>
     </div>
-    <button class="yenile" id="yenile" type="button">Yenile</button>
+    <div style="display:flex;gap:8px;align-items:center;flex:0 0 auto">
+      <button class="yenile" id="yenile" type="button">Yenile</button>
+      <button class="avatar" data-hesapmenu type="button" aria-label="Hesap">·</button>
+    </div>
   </header>
 
   <div id="a-uyari"></div>
@@ -456,7 +464,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 23:24";
+const SURUM = "20.09 23:29";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -528,6 +536,8 @@ function girisGoster(goster){
   document.getElementById("v-merkez").hidden = goster || document.documentElement.dataset.app === "altin";
   document.getElementById("v-altin").hidden = goster || document.documentElement.dataset.app !== "altin";
   document.querySelector("nav.tabs").hidden = goster;
+  avatarYaz();
+  document.querySelectorAll("[data-hesapmenu]").forEach(b => { b.hidden = goster; });
   const k = document.getElementById("kullanici-satiri");
   if (k) k.innerHTML = oturum?.kullanici
     ? `${esc(oturum.kullanici)} · <button type="button" id="sifre-degistir">şifre değiştir</button>
@@ -918,6 +928,7 @@ function menuAc(kod, x, y){
 const menuKapat = () => { dmenu.hidden = true; };
 dmenu.addEventListener("click", e => {
   const ad = e.target.closest("[data-ad]"), sil = e.target.closest("[data-sil-ders]");
+  if (e.target.id === "cikis" || e.target.id === "sifre-degistir") { menuKapat(); return; }
   menuKapat();
   if (ad) dersAdiDegistir(ad.dataset.ad);
   else if (sil) dersSil(sil.dataset.silDers);
@@ -1388,7 +1399,26 @@ let sifirlamaModu = false;
   sifirlamaModu = true;
 })();
 
-/* hesap islemleri (footer) */
+/* hesap dugmesi ve menusu */
+function avatarYaz(){
+  const harf = (oturum?.kullanici || "?").slice(0,1).toUpperCase();
+  document.querySelectorAll("[data-hesapmenu]").forEach(b => { b.textContent = harf; });
+}
+function hesapMenusu(dugme){
+  dmenu.innerHTML = `<div class="ad">${esc(oturum?.kullanici || "")}</div>
+    <button type="button" id="sifre-degistir">Şifre değiştir</button>
+    <button type="button" class="sil" id="cikis">Çıkış yap</button>`;
+  dmenu.hidden = false;
+  const g = dugme.getBoundingClientRect(), m = dmenu.getBoundingClientRect();
+  dmenu.style.left = Math.max(8, Math.min(g.right - m.width, innerWidth - m.width - 8)) + "px";
+  dmenu.style.top = (g.bottom + 6) + "px";
+}
+document.addEventListener("click", e => {
+  const d = e.target.closest("[data-hesapmenu]");
+  if (d) { e.stopPropagation(); hesapMenusu(d); }
+});
+
+/* hesap islemleri */
 document.addEventListener("click", async e => {
   if (e.target.id === "cikis") { cikisYap(); return; }
   if (e.target.id === "sifre-degistir") {
