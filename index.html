@@ -110,9 +110,11 @@
   .dg{font-size:12px;font-weight:600;padding:4px 9px;border-radius:999px;background:var(--acc-soft);color:var(--acc-ink)}
   .dg em{font-style:normal;font-weight:400;opacity:.8}
 
-  .dsat{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid var(--line)}
-  .dsat:last-child{border-bottom:0}
-  .dsat input.kod{flex:1 1 130px;min-width:110px}
+  .dblok{padding:10px 0;border-bottom:1px solid var(--line)}
+  .dblok:last-of-type{border-bottom:0}
+  .dbas{display:flex;gap:8px;align-items:center;margin-bottom:4px}
+  .dbas input.kod{flex:1 1 auto;font-weight:600}
+  .dsat{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:5px 0}
   .dsat input.saat{flex:0 0 76px;text-align:center}
   .gunler{display:flex;gap:3px}
   .gunler button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);
@@ -372,7 +374,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 18:38";
+const SURUM = "20.09 18:47";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -529,10 +531,16 @@ function rozetleriDoldur(){
 }
 
 /* --- ders yonetimi --- */
+function oturumlar(d){                    // eski tek-saatli kayitlari oturum listesine cevirir
+  if (Array.isArray(d.oturumlar)) return d.oturumlar;
+  d.oturumlar = [{gunler: d.gunler || [], saat: d.saat || "", bitis: d.bitis || ""}];
+  delete d.gunler; delete d.saat; delete d.bitis;
+  return d.oturumlar;
+}
 function dersEkle(kod){
   prog = prog || {donem:{ad:"Dönem"}, dersler:[]};
   prog.dersler = prog.dersler || [];
-  prog.dersler.push({kod: kod || "Yeni ders", gunler: [], saat: ""});
+  prog.dersler.push({kod: kod || "Yeni ders", oturumlar: [{gunler: [], saat: "", bitis: ""}]});
   dersKaydet();
   return prog.dersler.length - 1;
 }
@@ -543,22 +551,28 @@ function dersEditor(){
   const el = document.getElementById("ders-editor");
   if (el.hidden) return;
   const d = prog?.dersler || [];
-  el.innerHTML = (d.length ? d.map((x,i) => `<div class="dsat" data-i="${i}">
-      <input class="kod" type="text" value="${esc(x.kod)}" aria-label="Ders adı">
-      <div class="gunler" role="group" aria-label="Günler">${GUN.slice(0,5).map((g,j) =>
-        `<button type="button" data-gun="${j}" aria-pressed="${(x.gunler||[]).includes(j)}">${g}</button>`).join("")}</div>
-      <input class="saat" type="text" value="${esc(x.saat||"")}" placeholder="09:00" aria-label="Başlangıç saati">
-      <span style="color:var(--muted)">–</span>
-      <input class="saat bitis" type="text" value="${esc(x.bitis||"")}" placeholder="09:50" aria-label="Bitiş saati">
-      <button class="x" data-dsil="${i}" aria-label="Dersi sil">×</button>
+  el.innerHTML = (d.length ? d.map((x,i) => `<div class="dblok" data-i="${i}">
+      <div class="dbas">
+        <input class="kod" type="text" value="${esc(x.kod)}" aria-label="Ders adı">
+        <button class="x" data-dsil="${i}" aria-label="Dersi sil">×</button>
+      </div>` +
+      oturumlar(x).map((o,oi) => `<div class="dsat" data-o="${oi}">
+        <div class="gunler" role="group" aria-label="Günler">${GUN.slice(0,5).map((g,j) =>
+          `<button type="button" data-gun="${j}" aria-pressed="${(o.gunler||[]).includes(j)}">${g}</button>`).join("")}</div>
+        <input class="saat" type="text" value="${esc(o.saat||"")}" placeholder="09:00" aria-label="Başlangıç saati">
+        <span style="color:var(--muted)">–</span>
+        <input class="saat bitis" type="text" value="${esc(o.bitis||"")}" placeholder="09:50" aria-label="Bitiş saati">
+        <button class="x" data-osil="${oi}" aria-label="Saat dilimini sil"${oturumlar(x).length < 2 ? " hidden" : ""}>×</button>
+      </div>`).join("") +
+      `<button class="yenile" data-oekle="${i}" type="button" style="margin-top:6px">+ Saat dilimi</button>
     </div>`).join("") : `<div class="empty">Ders yok.</div>`) +
-    `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+    `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
        <button class="go" id="ders-ekle" type="button">+ Ders ekle</button>
        <button class="yenile" id="ders-kapat" type="button">Bitti</button>
      </div>
      <div style="font-size:11.5px;color:var(--muted);margin-top:8px">
-       Gün seçmezsen ders haftalık programda görünmez, yalnızca çalışma kaydında seçilebilir.<br>
-       Saat kutuları: başlangıç – bitiş (örn. 09:00 – 09:50).</div>`;
+       Aynı dersin farklı günlerde farklı saati varsa <b>+ Saat dilimi</b> ile ikinci satırı ekle.<br>
+       Gün seçmezsen ders haftalık programda görünmez, yalnızca çalışma kaydında seçilebilir.</div>`;
 }
 
 function mBaslik(){
@@ -582,10 +596,15 @@ function haftaProgram(){
     ? `${prog.donem.ad} · ${bas} gün sonra başlıyor` : (prog.donem?.ad || "");
   const idx = (bugun.getDay()+6)%7;
   document.getElementById("week").innerHTML = GUN.slice(0,5).map((g,i) => {
-    const d = prog.dersler.filter(x => (x.gunler||[]).includes(i));
+    const bugunkuler = [];
+    prog.dersler.forEach(x => oturumlar(x).forEach(o => {
+      if ((o.gunler||[]).includes(i)) bugunkuler.push({kod: x.kod, saat: o.saat, bitis: o.bitis});
+    }));
+    bugunkuler.sort((a,b) => (a.saat||"99") < (b.saat||"99") ? -1 : 1);
     return `<div class="day${i===idx?" today":""}"><div class="dn">${g}</div>` +
-      (d.length ? d.map(x => `<div class="slot" data-ders="${esc(x.kod)}">${esc(x.kod)}<em>${esc(x.saat||"")}${x.bitis ? "<br>" + esc(x.bitis) : ""}</em></div>`).join("")
-                : `<div class="slot" style="background:transparent;color:var(--muted);font-weight:400">—</div>`) + `</div>`;
+      (bugunkuler.length
+        ? bugunkuler.map(x => `<div class="slot" data-ders="${esc(x.kod)}">${esc(x.kod)}<em>${esc(x.saat||"")}${x.bitis ? "<br>" + esc(x.bitis) : ""}</em></div>`).join("")
+        : `<div class="slot" style="background:transparent;color:var(--muted);font-weight:400">—</div>`) + `</div>`;
   }).join("");
 }
 
@@ -776,14 +795,23 @@ document.getElementById("ders-duzenle").addEventListener("click", () => {
   dersEditor();
 });
 document.getElementById("ders-editor").addEventListener("click", e => {
-  if (e.target.id === "ders-ekle") { dersEkle(); document.querySelector("#ders-editor .dsat:last-of-type .kod")?.select(); return; }
+  if (e.target.id === "ders-ekle") { dersEkle(); document.querySelector("#ders-editor .dblok:last-of-type .kod")?.select(); return; }
   if (e.target.id === "ders-kapat") { document.getElementById("ders-duzenle").click(); return; }
-  const sil = e.target.closest("[data-dsil]");
-  if (sil) { prog.dersler.splice(+sil.dataset.dsil, 1); dersKaydet(); return; }
+  const dsil = e.target.closest("[data-dsil]");
+  if (dsil) { prog.dersler.splice(+dsil.dataset.dsil, 1); dersKaydet(); return; }
+  const oekle = e.target.closest("[data-oekle]");
+  if (oekle) { oturumlar(prog.dersler[+oekle.dataset.oekle]).push({gunler: [], saat: "", bitis: ""}); dersKaydet(); return; }
+  const osil = e.target.closest("[data-osil]");
+  if (osil) {
+    const i = +osil.closest(".dblok").dataset.i;
+    oturumlar(prog.dersler[i]).splice(+osil.dataset.osil, 1);
+    dersKaydet(); return;
+  }
   const gun = e.target.closest("button[data-gun]");
   if (gun) {
-    const i = +gun.closest(".dsat").dataset.i, j = +gun.dataset.gun;
-    const liste = prog.dersler[i].gunler || (prog.dersler[i].gunler = []);
+    const i = +gun.closest(".dblok").dataset.i, oi = +gun.closest(".dsat").dataset.o, j = +gun.dataset.gun;
+    const o = oturumlar(prog.dersler[i])[oi];
+    const liste = o.gunler || (o.gunler = []);
     const yer = liste.indexOf(j);
     yer === -1 ? liste.push(j) : liste.splice(yer, 1);
     liste.sort();
@@ -791,9 +819,9 @@ document.getElementById("ders-editor").addEventListener("click", e => {
   }
 });
 document.getElementById("ders-editor").addEventListener("change", e => {
-  const sat = e.target.closest(".dsat");
-  if (!sat) return;
-  const i = +sat.dataset.i;
+  const blok = e.target.closest(".dblok");
+  if (!blok) return;
+  const i = +blok.dataset.i;
   if (e.target.classList.contains("kod")) {
     const eski = prog.dersler[i].kod, yeniAd = e.target.value.trim() || eski;
     prog.dersler[i].kod = yeniAd;
@@ -801,8 +829,13 @@ document.getElementById("ders-editor").addEventListener("change", e => {
     gorevler = gorevler.map(g => g.ders === eski ? {...g, ders: yeniAd} : g);
     kaydet("m_calisma", calisma); kaydet("m_gorevler", gorevler);
     senkYaz("calisma"); senkYaz("gorevler"); mCalisma(); mGorevler();
-  } else if (e.target.classList.contains("bitis")) prog.dersler[i].bitis = e.target.value.trim();
-  else if (e.target.classList.contains("saat")) prog.dersler[i].saat = e.target.value.trim();
+  } else {
+    const sat = e.target.closest(".dsat");
+    if (!sat) return;
+    const o = oturumlar(prog.dersler[i])[+sat.dataset.o];
+    if (e.target.classList.contains("bitis")) o.bitis = e.target.value.trim();
+    else if (e.target.classList.contains("saat")) o.saat = e.target.value.trim();
+  }
   dersKaydet();
 });
 function yeniDersSor(secim){
