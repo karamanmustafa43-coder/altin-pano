@@ -456,7 +456,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 21:01";
+const SURUM = "20.09 23:24";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -1379,13 +1379,13 @@ document.getElementById("giris-form").addEventListener("submit", async e => {
 });
 
 /* e-posta bagilantisiyla gelen sifirlama */
+let sifirlamaModu = false;
 (function sifirlamaYakala(){
   const h = new URLSearchParams(location.hash.slice(1));
   if (h.get("type") !== "recovery" || !h.get("access_token")) return;
   oturumKaydet({access_token: h.get("access_token"), refresh_token: h.get("refresh_token"), expires_in: 3600});
   history.replaceState(null, "", location.pathname);
-  girisGoster(true);
-  modDegistir("yeni");
+  sifirlamaModu = true;
 })();
 
 /* hesap islemleri (footer) */
@@ -1408,7 +1408,10 @@ document.addEventListener("click", async e => {
 
 modDegistir("giris");
 
-if (oturum) {
+if (sifirlamaModu) {                 // e-postadaki baglantiyla geldi: once yeni sifre
+  girisGoster(true);
+  modDegistir("yeni");
+} else if (oturum) {
   girisGoster(false);
   senkDurumYaz("bekliyor");
   jetonTazele().then(() => senkOku()).then(() => tohumlanan.forEach(senkYaz));
