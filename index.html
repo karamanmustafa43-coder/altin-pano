@@ -221,6 +221,19 @@
   #giris-form{display:block;margin-top:18px}
   #giris-form input{margin-bottom:8px;text-align:center}
   .ghata{background:var(--down-soft);color:var(--down);border-radius:10px;padding:9px 11px;font-size:13px;margin:6px 0 10px}
+  .ghatirla{display:flex;align-items:center;gap:8px;justify-content:center;font-size:12.5px;color:var(--ink-2);
+    margin:2px 0 10px;cursor:pointer}
+  .ghatirla input{width:auto;margin:0}
+  .gbaglar{margin-top:14px;display:flex;gap:8px;justify-content:center;align-items:center;font-size:13px;color:var(--muted)}
+  .gbaglar button{background:none;border:0;color:var(--acc-ink);font:inherit;font-weight:600;cursor:pointer;
+    padding:4px 2px;text-decoration:underline}
+  #g-hesaplar{display:flex;flex-direction:column;gap:6px;margin-top:16px}
+  .ghesap{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:12px;padding:10px 12px;cursor:pointer;text-align:left;font:inherit;color:var(--ink);width:100%}
+  .ghesap .bas{width:28px;height:28px;border-radius:50%;background:var(--acc-soft);color:var(--acc-ink);
+    display:grid;place-items:center;font-weight:700;font-size:13px;flex:0 0 auto}
+  .ghesap .eposta{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px}
+  .ghesap .unut{color:var(--muted);font-size:15px;padding:0 4px}
   .kullanici{font-size:11.5px;color:var(--muted)}
   .kullanici button{background:none;border:0;color:var(--acc-ink);font:inherit;font-size:11.5px;
     font-weight:600;cursor:pointer;padding:0 2px;text-decoration:underline}
@@ -246,15 +259,27 @@
   <div class="gkart">
     <img src="icon-192.png" width="56" height="56" alt="" style="border-radius:14px">
     <h1 style="margin-top:12px">Adım Adım</h1>
-    <p class="galt">Dersini, çalışmanı ve yatırımını tek yerden takip et.</p>
-    <form id="giris-form">
+    <p class="galt" id="g-slogan">Dersini, çalışmanı ve yatırımını tek yerden takip et.</p>
+
+    <div id="g-hesaplar" hidden></div>
+
+    <form id="giris-form" autocomplete="on">
       <input type="email" id="g-eposta" placeholder="E-posta" autocomplete="username" required>
-      <input type="password" id="g-sifre" placeholder="Şifre" autocomplete="current-password" required minlength="6">
+      <input type="password" id="g-sifre" placeholder="Şifre" autocomplete="current-password" minlength="6">
+      <input type="password" id="g-sifre2" placeholder="Şifreyi tekrar yaz" autocomplete="new-password" minlength="6" hidden>
+      <label class="ghatirla" id="g-hatirla-satir">
+        <input type="checkbox" id="g-hatirla" checked> E-postamı bu cihazda hatırla
+      </label>
       <div id="g-hata" class="ghata" hidden></div>
       <button class="go big" type="submit" id="g-gir" style="width:100%">Giriş yap</button>
-      <button class="yenile" type="button" id="g-kayit" style="width:100%;margin-top:8px">Hesap oluştur</button>
     </form>
-    <p class="galt" style="margin-top:14px">Şifreni yalnızca sen bilirsin; verilerin başka kullanıcılara kapalıdır.</p>
+
+    <div class="gbaglar">
+      <button type="button" data-mod="kayit" id="l-kayit">Hesap oluştur</button>
+      <span>·</span>
+      <button type="button" data-mod="sifirla" id="l-sifirla">Şifremi unuttum</button>
+      <button type="button" data-mod="giris" id="l-geri" hidden>Girişe dön</button>
+    </div>
   </div>
 </div>
 
@@ -431,7 +456,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 19:39";
+const SURUM = "20.09 20:30";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -505,7 +530,8 @@ function girisGoster(goster){
   document.querySelector("nav.tabs").hidden = goster;
   const k = document.getElementById("kullanici-satiri");
   if (k) k.innerHTML = oturum?.kullanici
-    ? `${esc(oturum.kullanici)} · <button type="button" id="cikis">çıkış</button>` : "";
+    ? `${esc(oturum.kullanici)} · <button type="button" id="sifre-degistir">şifre değiştir</button>
+       · <button type="button" id="cikis">çıkış</button>` : "";
 }
 
 async function cikisYap(){
@@ -1243,56 +1269,139 @@ mRender();
 aRender();
 document.getElementById("surum").textContent = "sürüm " + SURUM;
 
+/* ---- giris / kayit / sifirlama / yeni sifre ---- */
+let mod = "giris";                                   // giris | kayit | sifirla | yeni
+
+const hesaplarOku = () => yukle("kayitli_hesaplar", []);
+function hesapEkle(eposta){
+  const l = hesaplarOku().filter(x => x !== eposta);
+  l.unshift(eposta);
+  kaydet("kayitli_hesaplar", l.slice(0, 4));
+}
+function hesaplariCiz(){
+  const kutu = document.getElementById("g-hesaplar"), l = hesaplarOku();
+  kutu.hidden = !(l.length && mod === "giris");
+  kutu.innerHTML = l.map(e => `<button type="button" class="ghesap" data-hesap="${esc(e)}">
+      <span class="bas">${esc(e.slice(0,1).toUpperCase())}</span>
+      <span class="eposta">${esc(e)}</span>
+      <span class="unut" data-unut="${esc(e)}" role="button" aria-label="Bu hesabı listeden kaldır">×</span>
+    </button>`).join("");
+}
+document.getElementById("g-hesaplar").addEventListener("click", e => {
+  const unut = e.target.closest("[data-unut]");
+  if (unut) { kaydet("kayitli_hesaplar", hesaplarOku().filter(x => x !== unut.dataset.unut)); hesaplariCiz(); return; }
+  const h = e.target.closest("[data-hesap]");
+  if (!h) return;
+  document.getElementById("g-eposta").value = h.dataset.hesap;
+  document.getElementById("g-sifre").focus();
+});
+
+function modDegistir(yeni){
+  mod = yeni;
+  const metin = {giris:["Giriş yap","Dersini, çalışmanı ve yatırımını tek yerden takip et."],
+                 kayit:["Hesabı oluştur","Yeni hesap: e-postanı yaz, şifreni iki kez gir."],
+                 sifirla:["Sıfırlama bağlantısı gönder","E-postanı yaz; şifreni yenilemen için bağlantı yollayalım."],
+                 yeni:["Şifreyi kaydet","Yeni şifreni iki kez yaz."]}[yeni];
+  document.getElementById("g-gir").textContent = metin[0];
+  document.getElementById("g-slogan").textContent = metin[1];
+  document.getElementById("g-sifre").hidden = yeni === "sifirla";
+  document.getElementById("g-sifre").required = yeni !== "sifirla";
+  document.getElementById("g-sifre2").hidden = !(yeni === "kayit" || yeni === "yeni");
+  document.getElementById("g-sifre2").required = (yeni === "kayit" || yeni === "yeni");
+  document.getElementById("g-eposta").hidden = yeni === "yeni";
+  document.getElementById("g-eposta").required = yeni !== "yeni";
+  document.getElementById("g-hatirla-satir").hidden = yeni !== "giris";
+  document.getElementById("l-kayit").hidden = yeni !== "giris";
+  document.getElementById("l-sifirla").hidden = yeni !== "giris";
+  document.getElementById("l-geri").hidden = yeni === "giris" || yeni === "yeni";
+  document.getElementById("g-sifre").autocomplete = yeni === "giris" ? "current-password" : "new-password";
+  document.getElementById("g-hata").hidden = true;
+  hesaplariCiz();
+}
+document.querySelectorAll(".gbaglar button").forEach(b =>
+  b.addEventListener("click", () => modDegistir(b.dataset.mod)));
+
+function hataYaz(metin, iyi){
+  const h = document.getElementById("g-hata");
+  h.textContent = metin;
+  h.hidden = false;
+  h.style.background = iyi ? "var(--up-soft)" : "var(--down-soft)";
+  h.style.color = iyi ? "var(--up)" : "var(--down)";
+}
+
 document.getElementById("giris-form").addEventListener("submit", async e => {
   e.preventDefault();
-  await kimlik("token?grant_type=password");
-});
-document.getElementById("g-kayit").addEventListener("click", () => kimlik("signup"));
-document.addEventListener("click", e => { if (e.target.id === "cikis") cikisYap(); });
-
-async function kimlik(yol){
-  const hata = document.getElementById("g-hata");
   const eposta = document.getElementById("g-eposta").value.trim();
   const sifre = document.getElementById("g-sifre").value;
-  if (!eposta || sifre.length < 6) {
-    hata.textContent = "E-posta ve en az 6 karakterlik şifre gerekli."; hata.hidden = false; return;
-  }
-  hata.hidden = true;
-  document.getElementById("g-gir").disabled = true;
+  const sifre2 = document.getElementById("g-sifre2").value;
+  const btn = document.getElementById("g-gir");
+  document.getElementById("g-hata").hidden = true;
+
+  if ((mod === "kayit" || mod === "yeni") && sifre !== sifre2) return hataYaz("Şifreler birbirini tutmuyor.");
+  if (mod !== "sifirla" && sifre.length < 6) return hataYaz("Şifre en az 6 karakter olmalı.");
+
+  btn.disabled = true;
   try {
-    const d = await girisIstek(yol, eposta, sifre);
-    if (!d.access_token) {          // kayitta e-posta dogrulamasi acik olabilir
-      hata.textContent = "Hesap oluşturuldu. E-postana gelen doğrulama bağlantısına tıklayıp giriş yap.";
-      hata.hidden = false; return;
+    if (mod === "sifirla") {
+      const r = await fetch(SB.url + "/auth/v1/recover?redirect_to=" + encodeURIComponent(location.origin + location.pathname),
+        {method:"POST", headers:{apikey: SB.key, "Content-Type":"application/json"}, body: JSON.stringify({email: eposta})});
+      if (!r.ok) throw new Error("Bağlantı gönderilemedi");
+      hataYaz("Sıfırlama bağlantısı e-postana gönderildi. Bağlantıya tıklayıp yeni şifreni belirle.", true);
+      return;
     }
+    if (mod === "yeni") {
+      const r = await fetch(SB.url + "/auth/v1/user", {method:"PUT", headers: sbBas(), body: JSON.stringify({password: sifre})});
+      if (!r.ok) throw new Error("Şifre güncellenemedi, bağlantının süresi dolmuş olabilir.");
+      hataYaz("Şifren güncellendi. Giriş yapabilirsin.", true);
+      setTimeout(() => location.replace(location.pathname), 1200);
+      return;
+    }
+    const d = await girisIstek(mod === "kayit" ? "signup" : "token?grant_type=password", eposta, sifre);
+    if (!d.access_token) { hataYaz("Hesap oluşturuldu. E-postandaki doğrulama bağlantısına tıklayıp giriş yap.", true); return; }
     const oncekiUid = oturum?.uid;
     oturumKaydet(d);
+    if (document.getElementById("g-hatirla").checked || mod === "kayit") hesapEkle(eposta);
     if (oncekiUid && oncekiUid !== oturum.uid) yerelTemizle();
     location.reload();
   } catch (err) {
-    hata.textContent = String(err.message || err).replace("Invalid login credentials", "E-posta ya da şifre hatalı.");
-    hata.hidden = false;
+    hataYaz(String(err.message || err)
+      .replace("Invalid login credentials", "E-posta ya da şifre hatalı.")
+      .replace("User already registered", "Bu e-posta zaten kayıtlı. Giriş yap ya da şifreni sıfırla."));
   } finally {
-    document.getElementById("g-gir").disabled = false;
+    btn.disabled = false;
   }
-}
+});
 
-/* yeni surum varsa kendini tazele (onbellek yuzunden elle yenilemeye gerek kalmasin) */
-async function surumKontrol(){
-  try {
-    const r = await fetch("surum.json?t=" + Date.now(), {cache: "no-store"});
-    if (!r.ok) return;
-    const {surum} = await r.json();
-    if (!surum || surum === SURUM) return;
-    if (sessionStorage.getItem("surum_denendi") === surum) return;   // sonsuz donguye girme
-    sessionStorage.setItem("surum_denendi", surum);
-    document.getElementById("surum").textContent = "yeni sürüm yükleniyor…";
-    location.replace(location.pathname + "?s=" + encodeURIComponent(surum));
-  } catch {}
-}
-surumKontrol();
-setInterval(() => { if (!document.hidden) surumKontrol(); }, 300000);        // 5 dakikada bir
-document.addEventListener("visibilitychange", () => { if (!document.hidden) surumKontrol(); });
+/* e-posta bagilantisiyla gelen sifirlama */
+(function sifirlamaYakala(){
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (h.get("type") !== "recovery" || !h.get("access_token")) return;
+  oturumKaydet({access_token: h.get("access_token"), refresh_token: h.get("refresh_token"), expires_in: 3600});
+  history.replaceState(null, "", location.pathname);
+  girisGoster(true);
+  modDegistir("yeni");
+})();
+
+/* hesap islemleri (footer) */
+document.addEventListener("click", async e => {
+  if (e.target.id === "cikis") { cikisYap(); return; }
+  if (e.target.id === "sifre-degistir") {
+    const s1 = prompt("Yeni şifren (en az 6 karakter):");
+    if (!s1) return;
+    if (s1.length < 6) return alert("Şifre en az 6 karakter olmalı.");
+    const s2 = prompt("Yeni şifreyi tekrar yaz:");
+    if (s1 !== s2) return alert("Şifreler birbirini tutmuyor, değişiklik yapılmadı.");
+    try {
+      await jetonTazele();
+      const r = await fetch(SB.url + "/auth/v1/user", {method:"PUT", headers: sbBas(), body: JSON.stringify({password: s1})});
+      if (!r.ok) throw new Error();
+      alert("Şifren güncellendi.");
+    } catch { alert("Şifre güncellenemedi. Çıkış yapıp tekrar giriş yapmayı dene."); }
+  }
+});
+
+modDegistir("giris");
+
 if (oturum) {
   girisGoster(false);
   senkDurumYaz("bekliyor");
