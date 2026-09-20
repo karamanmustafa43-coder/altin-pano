@@ -537,8 +537,8 @@
   </div>
 
   <footer>
-    Vakitler <b>Diyanet İşleri Başkanlığı</b> hesaplama yöntemiyle, Dayton (America/New_York) saatine göre.<br>
-    Kaynak: AlAdhan · çevrimdışıyken en son indirilen aylar gösterilir.
+    Vakitler <b>Diyanet İşleri Başkanlığı</b>'nın Dayton takvimindendir; her gün otomatik tazelenir.<br>
+    Diyanet'te bulunmayan günlerde (çok eski tarihler) hesaplanmış yedek kaynak kullanılır.
   </footer>
 </main>
 
@@ -563,7 +563,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "21.09 00:31";
+const SURUM = "21.09 00:39";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -1247,6 +1247,7 @@ const saatKaydir = (hhmm, dk) => {
   let t = (sa * 60 + mm + dk + 1440) % 1440;
   return String(Math.floor(t / 60)).padStart(2,"0") + ":" + String(t % 60).padStart(2,"0");
 };
+let diyanet = yukle("n_diyanet", {});      // Diyanet'ten gelen gunluk vakitler (birincil)
 let aylar = yukle("n_aylar", {});        // {"2026-09": {"2026-09-01": {Imsak:"05:20", ...}}}
 let nSecili = bugunIso, nAy = bugunIso.slice(0,7);
 
@@ -1257,7 +1258,19 @@ function ucAy(){
                              return ayAnahtari(t.getFullYear(), t.getMonth()+1); });
 }
 
+async function diyanetYukle(){
+  try {
+    const r = await fetch("namaz.json?t=" + Date.now(), {cache: "no-store"});
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.gunler && Object.keys(d.gunler).length) {
+      diyanet = d.gunler; kaydet("n_diyanet", diyanet); nRender();
+    }
+  } catch {}
+}
+
 async function namazYukle(zorla){
+  diyanetYukle();
   const gerek = ucAy().filter(a => zorla || !aylar[a]);
   if (gerek.length) {
     document.getElementById("n-konum").textContent = "vakitler alınıyor…";
@@ -1286,7 +1299,7 @@ async function namazYukle(zorla){
 }
 
 const gunSaatleri = t => {
-  const ham = aylar[t.slice(0,7)]?.[t];
+  const ham = diyanet[t] || aylar[t.slice(0,7)]?.[t];   // once Diyanet, yoksa yedek kaynak
   if (!ham) return ham;
   const c = {};
   VAKIT_ADI.forEach(([k]) => { c[k] = saatKaydir(ham[k], duzelt[k] || 0); });
@@ -1365,8 +1378,8 @@ function ayarCiz(){
         <button type="button" data-ayar="${k}" data-yon="1" aria-label="${esc(ad)} bir dakika ileri">+</button>
       </span></div>`).join("") +
     `<div style="font-size:11.5px;color:var(--muted);margin-top:8px">
-       Diyanet takvimiyle farklıysa buradan dakika ekleyip çıkarabilirsin. Ayar tüm günlere uygulanır ve
-       diğer cihazlarına da geçer.</div>`;
+       Vakitler artık doğrudan Diyanet'ten geliyor, normalde düzeltmeye gerek yok.
+       Yine de bir farklılık görürsen buradan dakika ekleyip çıkarabilirsin; ayar diğer cihazlarına da geçer.</div>`;
 }
 document.getElementById("n-ayar-ac").addEventListener("click", () => {
   const el = document.getElementById("n-ayar");
