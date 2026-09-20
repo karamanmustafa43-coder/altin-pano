@@ -45,6 +45,7 @@
     }
   }
   *{box-sizing:border-box}
+  [hidden]{display:none!important}
   html,body{margin:0;padding:0}
   body{background:var(--bg);color:var(--ink);font-family:"Source Sans 3",system-ui,-apple-system,sans-serif;
        font-size:15px;line-height:1.5;padding-top:env(safe-area-inset-top,0px);
@@ -211,6 +212,19 @@
   footer{margin-top:24px;text-align:center;font-size:11.5px;color:var(--muted);line-height:1.7}
   footer b{color:var(--ink-2)}
 
+  /* giris */
+  #giris{min-height:76vh;display:grid;place-items:center;padding:24px 16px}
+  .gkart{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--line);border-radius:18px;
+    padding:26px 22px;text-align:center}
+  .gkart h1{font-size:24px}
+  .galt{font-size:13px;color:var(--muted);margin:6px 0 0;line-height:1.5}
+  #giris-form{display:block;margin-top:18px}
+  #giris-form input{margin-bottom:8px;text-align:center}
+  .ghata{background:var(--down-soft);color:var(--down);border-radius:10px;padding:9px 11px;font-size:13px;margin:6px 0 10px}
+  .kullanici{font-size:11.5px;color:var(--muted)}
+  .kullanici button{background:none;border:0;color:var(--acc-ink);font:inherit;font-size:11.5px;
+    font-weight:600;cursor:pointer;padding:0 2px;text-decoration:underline}
+
   /* alt sekmeler */
   nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;
     background:var(--surface);border-top:1px solid var(--line);
@@ -227,6 +241,23 @@
 </head>
 <body>
 
+<!-- ============ GİRİŞ ============ -->
+<div id="giris" hidden>
+  <div class="gkart">
+    <img src="icon-192.png" width="56" height="56" alt="" style="border-radius:14px">
+    <h1 style="margin-top:12px">Adım Adım</h1>
+    <p class="galt">Dersini, çalışmanı ve yatırımını tek yerden takip et.</p>
+    <form id="giris-form">
+      <input type="email" id="g-eposta" placeholder="E-posta" autocomplete="username" required>
+      <input type="password" id="g-sifre" placeholder="Şifre" autocomplete="current-password" required minlength="6">
+      <div id="g-hata" class="ghata" hidden></div>
+      <button class="go big" type="submit" id="g-gir" style="width:100%">Giriş yap</button>
+      <button class="yenile" type="button" id="g-kayit" style="width:100%;margin-top:8px">Hesap oluştur</button>
+    </form>
+    <p class="galt" style="margin-top:14px">Şifreni yalnızca sen bilirsin; verilerin başka kullanıcılara kapalıdır.</p>
+  </div>
+</div>
+
 <!-- ============ MERKEZ ============ -->
 <main id="v-merkez" class="wrap">
   <header class="top">
@@ -242,6 +273,19 @@
   </header>
 
   <div id="m-uyari"></div>
+
+  <section>
+    <div class="shead"><h2>Görevler ve teslimler</h2><div class="meta" id="gorev-meta"></div></div>
+    <div class="panel">
+      <ul class="list" id="gorevler"></ul>
+      <form id="gorev-form">
+        <div class="f"><input type="text" id="g-baslik" placeholder="Yeni görev ya da ödev" required></div>
+        <div class="f-s"><select id="g-ders"></select></div>
+        <div class="f-s"><input type="date" id="g-teslim" aria-label="Teslim tarihi"></div>
+        <button class="go" type="submit">Ekle</button>
+      </form>
+    </div>
+  </section>
 
   <section>
     <div class="shead"><h2>Çalışma</h2><div class="meta" id="c-meta">bu hafta</div></div>
@@ -286,19 +330,6 @@
   </section>
 
   <section>
-    <div class="shead"><h2>Görevler ve teslimler</h2><div class="meta" id="gorev-meta"></div></div>
-    <div class="panel">
-      <ul class="list" id="gorevler"></ul>
-      <form id="gorev-form">
-        <div class="f"><input type="text" id="g-baslik" placeholder="Yeni görev ya da ödev" required></div>
-        <div class="f-s"><select id="g-ders"></select></div>
-        <div class="f-s"><input type="date" id="g-teslim" aria-label="Teslim tarihi"></div>
-        <button class="go" type="submit">Ekle</button>
-      </form>
-    </div>
-  </section>
-
-  <section>
     <div class="shead"><h2>Notlar</h2><div class="meta" id="not-meta"></div></div>
     <div id="notlar"></div>
     <form id="not-form">
@@ -309,6 +340,7 @@
 
   <footer>
     <button class="yenile" id="disa-aktar" type="button">Verileri kopyala</button><br>
+    <span class="kullanici" id="kullanici-satiri"></span><br>
     <span class="senk">bulut: bağlanıyor…</span><br>
     Veriler telefonda tutulur ve kendi bulut veritabanına eşitlenir.<br>
     <span id="surum"></span> · kendini günceller
@@ -399,7 +431,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.09 19:20";
+const SURUM = "20.09 19:39";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -423,7 +455,67 @@ const SB = {
   url: "https://ytjlbclwihcoarconuxp.supabase.co",
   key: "sb_publishable_Ve4xLucFlCwWjDab_A-m1g_MhU5SaDN"   // yayimlanabilir anahtar: istemci kodunda durmasi normaldir
 };
-const SB_BAS = {apikey: SB.key, Authorization: "Bearer " + SB.key, "Content-Type": "application/json"};
+let oturum = null;
+try { oturum = JSON.parse(localStorage.getItem("sb_oturum") || "null"); } catch {}
+
+function sbBas(){
+  const jeton = oturum?.access_token || SB.key;
+  return {apikey: SB.key, Authorization: "Bearer " + jeton, "Content-Type": "application/json"};
+}
+
+async function jetonTazele(){
+  if (!oturum?.refresh_token) return false;
+  if (oturum.expires_at && Date.now() < oturum.expires_at - 60000) return true;
+  try {
+    const r = await fetch(SB.url + "/auth/v1/token?grant_type=refresh_token", {method:"POST",
+      headers: {apikey: SB.key, "Content-Type": "application/json"},
+      body: JSON.stringify({refresh_token: oturum.refresh_token})});
+    if (!r.ok) throw new Error("yenilenemedi");
+    oturumKaydet(await r.json());
+    return true;
+  } catch { return false; }
+}
+
+function oturumKaydet(d){
+  oturum = {access_token: d.access_token, refresh_token: d.refresh_token,
+            expires_at: Date.now() + (d.expires_in || 3600) * 1000,
+            kullanici: d.user?.email || oturum?.kullanici || "", uid: d.user?.id || oturum?.uid || ""};
+  try { localStorage.setItem("sb_oturum", JSON.stringify(oturum)); } catch {}
+}
+
+const VERI_ANAHTARLARI = ["m_gorevler","m_calisma","m_notlar","m_prog","m_takvim","m_hedef","m_sayac",
+                          "m_son_ders","a_islemler","senk_zaman"];
+function yerelTemizle(){
+  VERI_ANAHTARLARI.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+}
+
+async function girisIstek(yol, eposta, sifre){
+  const r = await fetch(SB.url + "/auth/v1/" + yol, {method:"POST",
+    headers: {apikey: SB.key, "Content-Type": "application/json"},
+    body: JSON.stringify({email: eposta, password: sifre})});
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.msg || d.error_description || d.message || "İşlem başarısız");
+  return d;
+}
+
+function girisGoster(goster){
+  document.getElementById("giris").hidden = !goster;
+  document.getElementById("v-merkez").hidden = goster || document.documentElement.dataset.app === "altin";
+  document.getElementById("v-altin").hidden = goster || document.documentElement.dataset.app !== "altin";
+  document.querySelector("nav.tabs").hidden = goster;
+  const k = document.getElementById("kullanici-satiri");
+  if (k) k.innerHTML = oturum?.kullanici
+    ? `${esc(oturum.kullanici)} · <button type="button" id="cikis">çıkış</button>` : "";
+}
+
+async function cikisYap(){
+  try { await fetch(SB.url + "/auth/v1/logout", {method:"POST", headers: sbBas()}); } catch {}
+  oturum = null;
+  try { localStorage.removeItem("sb_oturum"); } catch {}
+  yerelTemizle();
+  location.reload();
+}
+
 const ANAHTARLAR = {gorevler:"m_gorevler", calisma:"m_calisma", notlar:"m_notlar", islemler:"a_islemler", ayarlar:"m_ayarlar", prog:"m_prog", takvim:"m_takvim", sayac:"m_sayac"};
 let senkDurum = "bekliyor", senkZaman = {};
 try { senkZaman = JSON.parse(localStorage.getItem("senk_zaman") || "{}"); } catch {}
@@ -443,7 +535,8 @@ function senkYaz(ad){
   bekleyen[ad] = setTimeout(async () => {
     senkDurumYaz("yaziliyor");
     try {
-      const r = await fetch(SB.url + "/rest/v1/veri", {method:"POST", headers: {...SB_BAS, Prefer:"resolution=merge-duplicates"},
+      await jetonTazele();
+      const r = await fetch(SB.url + "/rest/v1/veri?on_conflict=user_id,anahtar", {method:"POST", headers: {...sbBas(), Prefer:"resolution=merge-duplicates"},
         body: JSON.stringify([{anahtar: ad, icerik: {veri: yerel, yerelZaman: senkZaman[ad]}}])});
       if (!r.ok) throw new Error(r.status);
       senkDurumYaz("esit");
@@ -452,8 +545,10 @@ function senkYaz(ad){
 }
 
 async function senkOku(){
+  if (!oturum) return;
   try {
-    const r = await fetch(SB.url + "/rest/v1/veri?select=anahtar,icerik,guncellendi", {headers: SB_BAS, cache:"no-store"});
+    await jetonTazele();
+    const r = await fetch(SB.url + "/rest/v1/veri?select=anahtar,icerik,guncellendi", {headers: sbBas(), cache:"no-store"});
     if (!r.ok) throw new Error(r.status);
     const satirlar = await r.json();
     let degisti = false;
@@ -517,8 +612,9 @@ const tohumlanan = new Set();
 /* ===== sekmeler ===== */
 function sekme(ad){
   document.documentElement.dataset.app = ad;
-  document.getElementById("v-merkez").hidden = ad !== "merkez";
-  document.getElementById("v-altin").hidden = ad !== "altin";
+  const girisAcik = !document.getElementById("giris").hidden;
+  document.getElementById("v-merkez").hidden = girisAcik || ad !== "merkez";
+  document.getElementById("v-altin").hidden = girisAcik || ad !== "altin";
   document.getElementById("t-merkez").setAttribute("aria-selected", ad === "merkez");
   document.getElementById("t-altin").setAttribute("aria-selected", ad === "altin");
   document.querySelector('meta[name="theme-color"]').content = ad === "altin" ? "#1d1a14" : "#0f1e1d";
@@ -1147,6 +1243,40 @@ mRender();
 aRender();
 document.getElementById("surum").textContent = "sürüm " + SURUM;
 
+document.getElementById("giris-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  await kimlik("token?grant_type=password");
+});
+document.getElementById("g-kayit").addEventListener("click", () => kimlik("signup"));
+document.addEventListener("click", e => { if (e.target.id === "cikis") cikisYap(); });
+
+async function kimlik(yol){
+  const hata = document.getElementById("g-hata");
+  const eposta = document.getElementById("g-eposta").value.trim();
+  const sifre = document.getElementById("g-sifre").value;
+  if (!eposta || sifre.length < 6) {
+    hata.textContent = "E-posta ve en az 6 karakterlik şifre gerekli."; hata.hidden = false; return;
+  }
+  hata.hidden = true;
+  document.getElementById("g-gir").disabled = true;
+  try {
+    const d = await girisIstek(yol, eposta, sifre);
+    if (!d.access_token) {          // kayitta e-posta dogrulamasi acik olabilir
+      hata.textContent = "Hesap oluşturuldu. E-postana gelen doğrulama bağlantısına tıklayıp giriş yap.";
+      hata.hidden = false; return;
+    }
+    const oncekiUid = oturum?.uid;
+    oturumKaydet(d);
+    if (oncekiUid && oncekiUid !== oturum.uid) yerelTemizle();
+    location.reload();
+  } catch (err) {
+    hata.textContent = String(err.message || err).replace("Invalid login credentials", "E-posta ya da şifre hatalı.");
+    hata.hidden = false;
+  } finally {
+    document.getElementById("g-gir").disabled = false;
+  }
+}
+
 /* yeni surum varsa kendini tazele (onbellek yuzunden elle yenilemeye gerek kalmasin) */
 async function surumKontrol(){
   try {
@@ -1163,8 +1293,14 @@ async function surumKontrol(){
 surumKontrol();
 setInterval(() => { if (!document.hidden) surumKontrol(); }, 300000);        // 5 dakikada bir
 document.addEventListener("visibilitychange", () => { if (!document.hidden) surumKontrol(); });
-senkDurumYaz("bekliyor");
-senkOku().then(() => tohumlanan.forEach(senkYaz));
+if (oturum) {
+  girisGoster(false);
+  senkDurumYaz("bekliyor");
+  jetonTazele().then(() => senkOku()).then(() => tohumlanan.forEach(senkYaz));
+} else {
+  girisGoster(true);
+  senkDurumYaz("bekliyor");
+}
 veriYukle().then(fiyatCek);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { fiyatCek(); senkOku(); } });
 setInterval(() => { if (!document.hidden) senkOku(); }, 45000);   // acikken 45 sn'de bir esitle
