@@ -223,6 +223,13 @@
   footer b{color:var(--ink-2)}
 
   /* namaz */
+  #v-namaz{max-width:940px}
+  .nizgara{display:grid;gap:16px}
+  .nizgara section{margin-top:22px}
+  @media (min-width:800px){
+    .nizgara{grid-template-columns:1.05fr 1fr;align-items:start}
+    .nizgara section{margin-top:22px}
+  }
   .vakitler{display:flex;flex-direction:column}
   .vakit{display:flex;align-items:center;gap:12px;padding:13px 2px;border-bottom:1px solid var(--line)}
   .vakit:last-child{border-bottom:0}
@@ -237,7 +244,7 @@
   .sayac-vakit{font-family:"IBM Plex Mono",monospace;font-size:30px;font-weight:700;color:var(--acc-ink);line-height:1.1}
 
   .takvim{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-  .takvim .bas{font-size:10.5px;font-weight:600;color:var(--muted);text-align:center;padding-bottom:4px;
+  .takvim .bas{font-size:10px;font-weight:600;color:var(--muted);text-align:center;padding-bottom:4px;
     font-family:"IBM Plex Mono",monospace;letter-spacing:.06em}
   .takvim button{aspect-ratio:1;border:1px solid transparent;background:none;border-radius:10px;cursor:pointer;
     font:inherit;font-size:13.5px;color:var(--ink);font-variant-numeric:tabular-nums;padding:0}
@@ -501,6 +508,7 @@
     </div>
   </header>
 
+  <div class="nizgara">
   <section>
     <div class="shead"><h2>Vakitler</h2><div class="meta" id="n-konum">Dayton, Ohio</div></div>
     <div class="panel">
@@ -522,6 +530,7 @@
         Bir güne dokun, o günün vakitleri üstte açılır. Önceki, bu ve gelecek ay elinin altında.</div>
     </div>
   </section>
+  </div>
 
   <footer>
     Vakitler <b>Diyanet İşleri Başkanlığı</b> hesaplama yöntemiyle, Dayton (America/New_York) saatine göre.<br>
@@ -550,7 +559,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "21.09 00:25";
+const SURUM = "21.09 00:28";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -1313,7 +1322,7 @@ function takvimCiz(){
   document.getElementById("n-geri").disabled = mevcut.indexOf(nAy) <= 0;
   document.getElementById("n-ileri").disabled = mevcut.indexOf(nAy) >= mevcut.length - 1;
   document.getElementById("n-takvim").innerHTML =
-    GUN.map(g => `<div class="bas">${g.slice(0,2)}</div>`).join("") +
+    GUN.map(g => `<div class="bas">${g}</div>`).join("") +
     "<div></div>".repeat(0) +
     [...Array(bosluk)].map(() => `<div></div>`).join("") +
     [...Array(gunSayisi)].map((_,i) => {
