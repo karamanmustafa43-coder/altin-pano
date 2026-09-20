@@ -369,7 +369,7 @@ const SB = {
   key: "sb_publishable_Ve4xLucFlCwWjDab_A-m1g_MhU5SaDN"   // yayimlanabilir anahtar: istemci kodunda durmasi normaldir
 };
 const SB_BAS = {apikey: SB.key, Authorization: "Bearer " + SB.key, "Content-Type": "application/json"};
-const ANAHTARLAR = {gorevler:"m_gorevler", calisma:"m_calisma", notlar:"m_notlar", islemler:"a_islemler", ayarlar:"m_ayarlar", prog:"m_prog", takvim:"m_takvim"};
+const ANAHTARLAR = {gorevler:"m_gorevler", calisma:"m_calisma", notlar:"m_notlar", islemler:"a_islemler", ayarlar:"m_ayarlar", prog:"m_prog", takvim:"m_takvim", sayac:"m_sayac"};
 let senkDurum = "bekliyor", senkZaman = {};
 try { senkZaman = JSON.parse(localStorage.getItem("senk_zaman") || "{}"); } catch {}
 
@@ -381,7 +381,7 @@ function senkDurumYaz(d){
 
 const bekleyen = {};
 function senkYaz(ad){
-  const yerel = {gorevler, calisma, notlar, islemler, prog, takvim, ayarlar: {hedef: hedefDk}}[ad];
+  const yerel = ad === "sayac" ? (sayac || {bos: true}) : {gorevler, calisma, notlar, islemler, prog, takvim, ayarlar: {hedef: hedefDk}}[ad];
   senkZaman[ad] = new Date().toISOString();
   try { localStorage.setItem("senk_zaman", JSON.stringify(senkZaman)); } catch {}
   clearTimeout(bekleyen[ad]);
@@ -408,12 +408,23 @@ async function senkOku(){
       if (tohumlanan.has(ad)) return;                              // bu acilista baglantidan geldi: yerel kazanir
       const v = st.icerik?.veri;
       if (v === undefined) return;
-      const yerelVar = {gorevler, calisma, notlar, islemler, takvim}[ad];
+      const yerelVar = {gorevler, calisma, notlar, islemler, takvim}[ad];   // sayac/ayarlar/prog nesne
       if (Array.isArray(v) && !v.length && Array.isArray(yerelVar) && yerelVar.length) return;  // bos sunucu dolu yereli silmesin
       if (ad === "gorevler") { gorevler = v; kaydet("m_gorevler", v); }
       else if (ad === "calisma") { calisma = v; kaydet("m_calisma", v); }
       else if (ad === "notlar") { notlar = v; kaydet("m_notlar", v); }
       else if (ad === "islemler") { islemler = v; kaydet("a_islemler", v); }
+      else if (ad === "sayac") {                                   // diger cihazda calisan sayac
+        const uzak = v && v.bas ? v : null;
+        const ayni = (uzak?.bas || 0) === (sayac?.bas || 0);
+        if (!ayni) {
+          clearInterval(tik);
+          sayac = uzak;
+          if (sayac) { kaydet("m_sayac", sayac); document.getElementById("c-ders").value = sayac.ders || ""; tik = setInterval(sayacYaz, 1000); }
+          else { try { localStorage.removeItem("m_sayac"); } catch {} }
+          sayacYaz();
+        }
+      }
       else if (ad === "prog") { prog = v; kaydet("m_prog", v); seceneklerDoldur(); }
       else if (ad === "takvim") { takvim = v; kaydet("m_takvim", v); }
       else if (ad === "ayarlar" && v.hedef) { hedefDk = v.hedef; kaydet("m_hedef", v.hedef); }
@@ -611,11 +622,11 @@ document.getElementById("sayac-btn").addEventListener("click", () => {
   if (!sayac) { sayac = {bas: Date.now(), ders: document.getElementById("c-ders").value};
                 kaydet("m_sayac", sayac); tik = setInterval(sayacYaz, 1000); sayacYaz(); return; }
   const dk = Math.max(1, Math.round((Date.now() - sayac.bas)/6e4)), ders = sayac.ders;
-  clearInterval(tik); sayac = null; try{ localStorage.removeItem("m_sayac"); }catch{} sayacYaz();
+  clearInterval(tik); sayac = null; try{ localStorage.removeItem("m_sayac"); }catch{} senkYaz("sayac"); sayacYaz();
   calismaEkle(ders, dk);
 });
 document.getElementById("sayac-iptal").addEventListener("click", () => {
-  clearInterval(tik); sayac = null; try{ localStorage.removeItem("m_sayac"); }catch{} sayacYaz();
+  clearInterval(tik); sayac = null; try{ localStorage.removeItem("m_sayac"); }catch{} senkYaz("sayac"); sayacYaz();
 });
 function calismaEkle(ders, dk){
   calisma.push({id: Date.now().toString(36), tarih: bugunIso, ders, dk, saat: new Date().toTimeString().slice(0,5)}); kaydet("m_calisma", calisma); senkYaz("calisma"); mCalisma();
@@ -860,6 +871,7 @@ senkDurumYaz("bekliyor");
 senkOku().then(() => tohumlanan.forEach(senkYaz));
 veriYukle().then(fiyatCek);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { fiyatCek(); senkOku(); } });
+setInterval(() => { if (!document.hidden) senkOku(); }, 45000);   // acikken 45 sn'de bir esitle
 </script>
 </body>
 </html>
