@@ -368,7 +368,7 @@ const SB = {
   key: "sb_publishable_Ve4xLucFlCwWjDab_A-m1g_MhU5SaDN"   // yayimlanabilir anahtar: istemci kodunda durmasi normaldir
 };
 const SB_BAS = {apikey: SB.key, Authorization: "Bearer " + SB.key, "Content-Type": "application/json"};
-const ANAHTARLAR = {gorevler:"m_gorevler", calisma:"m_calisma", notlar:"m_notlar", islemler:"a_islemler", ayarlar:"m_ayarlar"};
+const ANAHTARLAR = {gorevler:"m_gorevler", calisma:"m_calisma", notlar:"m_notlar", islemler:"a_islemler", ayarlar:"m_ayarlar", prog:"m_prog", takvim:"m_takvim"};
 let senkDurum = "bekliyor", senkZaman = {};
 try { senkZaman = JSON.parse(localStorage.getItem("senk_zaman") || "{}"); } catch {}
 
@@ -380,7 +380,7 @@ function senkDurumYaz(d){
 
 const bekleyen = {};
 function senkYaz(ad){
-  const yerel = {gorevler, calisma, notlar, islemler, ayarlar: {hedef: hedefDk}}[ad];
+  const yerel = {gorevler, calisma, notlar, islemler, prog, takvim, ayarlar: {hedef: hedefDk}}[ad];
   senkZaman[ad] = new Date().toISOString();
   try { localStorage.setItem("senk_zaman", JSON.stringify(senkZaman)); } catch {}
   clearTimeout(bekleyen[ad]);
@@ -407,12 +407,14 @@ async function senkOku(){
       if (tohumlanan.has(ad)) return;                              // bu acilista baglantidan geldi: yerel kazanir
       const v = st.icerik?.veri;
       if (v === undefined) return;
-      const yerelVar = {gorevler, calisma, notlar, islemler}[ad];
+      const yerelVar = {gorevler, calisma, notlar, islemler, takvim}[ad];
       if (Array.isArray(v) && !v.length && Array.isArray(yerelVar) && yerelVar.length) return;  // bos sunucu dolu yereli silmesin
       if (ad === "gorevler") { gorevler = v; kaydet("m_gorevler", v); }
       else if (ad === "calisma") { calisma = v; kaydet("m_calisma", v); }
       else if (ad === "notlar") { notlar = v; kaydet("m_notlar", v); }
       else if (ad === "islemler") { islemler = v; kaydet("a_islemler", v); }
+      else if (ad === "prog") { prog = v; kaydet("m_prog", v); seceneklerDoldur(); }
+      else if (ad === "takvim") { takvim = v; kaydet("m_takvim", v); }
       else if (ad === "ayarlar" && v.hedef) { hedefDk = v.hedef; kaydet("m_hedef", v.hedef); }
       senkZaman[ad] = sunucuZ; degisti = true;
     });
