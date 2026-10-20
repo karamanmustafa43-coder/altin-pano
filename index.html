@@ -168,8 +168,27 @@
   .slot{margin-top:5px;background:var(--acc-soft);color:var(--acc-ink);border-radius:7px;padding:4px 3px;font-size:10.5px;font-weight:600;text-align:center}
   .slot em{display:block;font-style:normal;font-weight:400;font-size:10px;opacity:.85;line-height:1.35;font-family:"IBM Plex Mono",monospace}
 
+  .obek{margin-top:14px}
+  .obek:first-of-type{margin-top:2px}
+  .obek .ob{display:flex;align-items:baseline;gap:8px;font-size:11px;font-weight:600;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--muted);font-family:"IBM Plex Mono",monospace;padding-bottom:2px}
+  .obek .ob .sayi{color:var(--ink-2)}
+  .obek.gec .ob{color:var(--down)}
+  .ozet{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+  .ozet span{font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--surface-2);
+    border:1px solid var(--line);color:var(--ink-2)}
+  .ozet span.crit{background:var(--down-soft);color:var(--down);border-color:transparent}
+  .ozet span.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+  .dersrozet{font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:6px;
+    background:var(--acc-soft);color:var(--acc-ink);white-space:nowrap}
+  .dersrozet.d2{background:var(--warn-soft);color:var(--warn)}
+  .dersrozet.d3{background:#e7e9f6;color:#3f4597}
+  .dersrozet.d4{background:var(--up-soft);color:var(--up)}
+  @media (prefers-color-scheme:dark){ .dersrozet.d3{background:#1d2140;color:#aab2f0} }
+  .gecmis-ac{background:none;border:0;color:var(--muted);font:inherit;font-size:12.5px;cursor:pointer;
+    text-decoration:underline;padding:8px 0 0}
   ul.list{list-style:none;margin:0;padding:0}
-  ul.list li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+  ul.list li{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
   ul.list li:last-child{border-bottom:0}
   .tick{flex:0 0 auto;width:24px;height:24px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface-2);
     cursor:pointer;display:grid;place-items:center;font-size:12px;color:var(--muted);padding:0}
@@ -563,7 +582,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "21.09 00:39";
+const SURUM = "20.10 21:45";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -985,28 +1004,74 @@ function mCalisma(){
     }).join("") + `</svg>`;
 }
 
+const DERS_SINIF = {};
+function dersSinifi(ad){
+  if (!ad) return "";
+  if (!(ad in DERS_SINIF)) DERS_SINIF[ad] = ["", "d2", "d3", "d4"][Object.keys(DERS_SINIF).length % 4];
+  return DERS_SINIF[ad];
+}
+
+function gorevSatiri(g){
+  const n = g.teslim ? gunFark(g.teslim) : null;
+  const sinif = n === null || g.durum === "bitti" ? "" : n < 0 ? " crit" : n <= 3 ? " crit" : n <= 10 ? " warn" : "";
+  const im = g.durum === "bitti" ? "✓" : g.durum === "yapiliyor" ? "◐" : "";
+  const tarih = g.teslim ? `${+g.teslim.slice(8)} ${AY[+g.teslim.slice(5,7)-1]}` : "tarihsiz";
+  return `<li data-id="${esc(g.id)}">
+    <button class="tick" data-durum="${esc(g.durum)}" aria-label="Durumu değiştir">${im}</button>
+    <div class="grow">
+      <div class="t-title${g.durum==="bitti"?" done":""}">${esc(g.baslik)}</div>
+      <div class="t-sub">${g.ders ? `<span class="dersrozet ${dersSinifi(g.ders)}">${esc(g.ders)}</span> ` : ""}${esc(tarih)}</div>
+    </div>
+    ${n !== null && g.durum !== "bitti" ? `<span class="chip${sinif}">${gunMetni(n)}</span>` : ""}
+    <button class="x" data-sil="${esc(g.id)}" aria-label="Sil">×</button></li>`;
+}
+
+let gecmisAcik = false;
 function mGorevler(){
-  const acik = canli(gorevler).filter(g => g.durum !== "bitti").sort((a,b) => (a.teslim||"9999") < (b.teslim||"9999") ? -1 : 1);
-  const hepsi = [...acik, ...canli(gorevler).filter(g => g.durum === "bitti").slice(0,3)];
+  const hepsi = canli(gorevler);
+  const acik = hepsi.filter(g => g.durum !== "bitti");
+  const sirala = (a,b) => (a.teslim || "9999") < (b.teslim || "9999") ? -1 : 1;
+
+  const gun = g => g.teslim ? gunFark(g.teslim) : null;
+  const gecen   = acik.filter(g => gun(g) !== null && gun(g) < 0).sort(sirala);
+  const bugun   = acik.filter(g => gun(g) === 0).sort(sirala);
+  const hafta   = acik.filter(g => gun(g) !== null && gun(g) >= 1 && gun(g) <= 7).sort(sirala);
+  const ileride = acik.filter(g => gun(g) !== null && gun(g) > 7).sort(sirala);
+  const tarihsiz = acik.filter(g => gun(g) === null);
+  const bitenler = hepsi.filter(g => g.durum === "bitti")
+    .sort((a,b) => (b.teslim || "") < (a.teslim || "") ? -1 : 1);
+
   document.getElementById("gorev-meta").textContent = acik.length ? acik.length + " açık" : "hepsi tamam";
-  document.getElementById("gorevler").innerHTML = hepsi.length ? hepsi.map(g => {
-    const n = g.teslim ? gunFark(g.teslim) : null;
-    const sinif = n === null || g.durum === "bitti" ? "" : n <= 3 ? " crit" : n <= 10 ? " warn" : "";
-    const im = g.durum === "bitti" ? "✓" : g.durum === "yapiliyor" ? "◐" : "";
-    return `<li data-id="${esc(g.id)}">
-      <button class="tick" data-durum="${esc(g.durum)}" aria-label="Durumu değiştir">${im}</button>
-      <div class="grow"><div class="t-title${g.durum==="bitti"?" done":""}">${esc(g.baslik)}</div>
-        <div class="t-sub">${g.ders?esc(g.ders)+" · ":""}${g.teslim?esc(g.teslim.slice(8)+"."+g.teslim.slice(5,7)):"tarihsiz"}</div></div>
-      ${n !== null && g.durum !== "bitti" ? `<span class="chip${sinif}">${gunMetni(n)}</span>` : ""}
-      <button class="x" data-sil="${esc(g.id)}" aria-label="Sil">×</button></li>`;
-  }).join("") : `<li><span class="empty">Görev yok. Aşağıdan ekleyebilirsin.</span></li>`;
+
+  const ozet = [];
+  if (gecen.length) ozet.push(`<span class="crit">${gecen.length} geciken</span>`);
+  if (bugun.length) ozet.push(`<span class="crit">bugün ${bugun.length}</span>`);
+  if (hafta.length) ozet.push(`<span class="warn">bu hafta ${hafta.length}</span>`);
+  if (ileride.length) ozet.push(`<span>ileride ${ileride.length}</span>`);
+  if (tarihsiz.length) ozet.push(`<span>tarihsiz ${tarihsiz.length}</span>`);
+
+  const obek = (ad, liste, ek) => liste.length
+    ? `<div class="obek${ek || ""}"><div class="ob">${ad}<span class="sayi">${liste.length}</span></div>
+       <ul class="list">${liste.map(gorevSatiri).join("")}</ul></div>` : "";
+
+  document.getElementById("gorevler").innerHTML =
+    (acik.length || bitenler.length
+      ? (ozet.length ? `<div class="ozet">${ozet.join("")}</div>` : "") +
+        obek("Geciken", gecen, " gec") +
+        obek("Bugün", bugun) +
+        obek("Bu hafta", hafta) +
+        obek("İleride", ileride) +
+        obek("Tarihsiz", tarihsiz) +
+        (bitenler.length
+          ? `<button class="gecmis-ac" type="button" id="gecmis-ac">${gecmisAcik ? "Biten işleri gizle" : `Biten işler (${bitenler.length})`}</button>` +
+            (gecmisAcik ? `<div class="obek"><ul class="list">${bitenler.slice(0,15).map(gorevSatiri).join("")}</ul></div>` : "")
+          : "")
+      : `<div class="empty">Görev yok. Aşağıdan ekleyebilirsin.</div>`);
 
   const u = [];
-  acik.filter(g => g.teslim).forEach(g => {
-    const n = gunFark(g.teslim);
-    if (n < 0) u.push(["", "Teslim geçti", `${g.baslik} — ${gunMetni(n)}`]);
-    else if (n <= 3) u.push(["", "Teslim yaklaştı", `${g.baslik} — ${gunMetni(n)}`]);
-  });
+  gecen.slice(0,2).forEach(g => u.push(["", "Teslim geçti", `${g.baslik}${g.ders ? " · " + g.ders : ""} — ${gunMetni(gunFark(g.teslim))}`]));
+  [...bugun, ...hafta].filter(g => gunFark(g.teslim) <= 3).slice(0,2)
+    .forEach(g => u.push(["", "Teslim yaklaştı", `${g.baslik}${g.ders ? " · " + g.ders : ""} — ${gunMetni(gunFark(g.teslim))}`]));
   const y = takvim.filter(t => gunFark(t.t ?? t.tarih) >= 0)[0];
   if (y && gunFark(y.t ?? y.tarih) <= 7) u.push(["sari", "Takvim", `${y.b ?? y.baslik} — ${gunMetni(gunFark(y.t ?? y.tarih))}`]);
   document.getElementById("m-uyari").innerHTML = u.slice(0,3)
@@ -1208,6 +1273,7 @@ document.getElementById("gorev-form").addEventListener("submit", e => {
   kaydet("m_gorevler", gorevler); senkYaz("gorevler"); e.target.reset(); mGorevler();
 });
 document.getElementById("gorevler").addEventListener("click", e => {
+  if (e.target.id === "gecmis-ac") { gecmisAcik = !gecmisAcik; mGorevler(); return; }
   const sil = e.target.closest("[data-sil]");
   if (sil) { gorevler = gorevler.map(g => g.id === sil.dataset.sil ? {...g, s: 1, g: simdi()} : g);
              kaydet("m_gorevler", gorevler); senkYaz("gorevler"); mGorevler(); return; }
