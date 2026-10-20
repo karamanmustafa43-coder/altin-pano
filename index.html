@@ -582,7 +582,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.10 21:45";
+const SURUM = "20.10 21:48";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -1069,12 +1069,16 @@ function mGorevler(){
       : `<div class="empty">Görev yok. Aşağıdan ekleyebilirsin.</div>`);
 
   const u = [];
-  gecen.slice(0,2).forEach(g => u.push(["", "Teslim geçti", `${g.baslik}${g.ders ? " · " + g.ders : ""} — ${gunMetni(gunFark(g.teslim))}`]));
-  [...bugun, ...hafta].filter(g => gunFark(g.teslim) <= 3).slice(0,2)
-    .forEach(g => u.push(["", "Teslim yaklaştı", `${g.baslik}${g.ders ? " · " + g.ders : ""} — ${gunMetni(gunFark(g.teslim))}`]));
+  if (gecen.length) u.push(["", gecen.length > 1 ? `${gecen.length} teslim geçti` : "Teslim geçti",
+    `${gecen[0].baslik}${gecen[0].ders ? " · " + gecen[0].ders : ""} — ${gunMetni(gunFark(gecen[0].teslim))}` +
+    (gecen.length > 1 ? ` · +${gecen.length - 1} tane daha` : "")]);
+  const yakin = [...bugun, ...hafta].filter(g => gunFark(g.teslim) <= 3);
+  if (yakin.length) u.push(["", yakin.length > 1 ? `${yakin.length} teslim yaklaştı` : "Teslim yaklaştı",
+    `${yakin[0].baslik}${yakin[0].ders ? " · " + yakin[0].ders : ""} — ${gunMetni(gunFark(yakin[0].teslim))}` +
+    (yakin.length > 1 ? ` · +${yakin.length - 1} tane daha` : "")]);
   const y = takvim.filter(t => gunFark(t.t ?? t.tarih) >= 0)[0];
   if (y && gunFark(y.t ?? y.tarih) <= 7) u.push(["sari", "Takvim", `${y.b ?? y.baslik} — ${gunMetni(gunFark(y.t ?? y.tarih))}`]);
-  document.getElementById("m-uyari").innerHTML = u.slice(0,3)
+  document.getElementById("m-uyari").innerHTML = u.slice(0,2)
     .map(([c,b,p]) => `<div class="uyari ${c}"><b>${esc(b)}</b><br>${esc(p)}</div>`).join("");
 }
 
