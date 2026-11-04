@@ -78,10 +78,17 @@ def sarrafiye_cek():
     """
     try:
         ham = json.loads(cek(SARRAFIYE_API, {"X-Api-Key": gizli}))
+        if not isinstance(ham, list):
+            print("sarrafiye: liste bekleniyordu, gelen:", str(ham)[:200])
+            return None
+        return _sarrafiye_ayristir(ham)
     except Exception as e:
         print("sarrafiye alinamadi:", e)
         return None
-    esleme = {x.get("code"): x for x in ham}
+
+
+def _sarrafiye_ayristir(ham):
+    esleme = {x.get("code"): x for x in ham if isinstance(x, dict)}
     sade = {sadelestir(k): v for k, v in esleme.items()}
     out = {}
     for anahtar_ad, adaylar in CINS_KODLARI.items():

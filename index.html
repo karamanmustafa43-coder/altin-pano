@@ -223,6 +223,7 @@
   .ipucu{flex:1 1 100%;font-size:11.5px;color:var(--muted);line-height:1.55;margin-top:-1px}
   .ipucu b{color:var(--ink-2);font-weight:600}
   .ipucu .ok{color:var(--acc-ink)}
+  .ipucu .yanlis{color:var(--down);font-weight:600}
 
   form{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
   input,select,textarea,button{font:inherit;color:inherit}
@@ -511,11 +512,11 @@
           <option value="tam">Tam altın</option>
           <option value="ata">Ata lirası</option>
         </select></div>
-        <div class="f"><input type="number" id="i-mik" step="0.01" min="0.01" placeholder="Gram" aria-label="Miktar" required></div>
-        <div class="f"><input type="number" id="i-fiyat" step="0.01" min="1" placeholder="Gram fiyatı (TL)" aria-label="Fiyat" required></div>
+        <div class="f"><input type="text" inputmode="decimal" id="i-mik" placeholder="Gram" aria-label="Gram" autocomplete="off"></div>
+        <div class="f"><input type="text" inputmode="decimal" id="i-fiyat" placeholder="Gram fiyatı (TL)" aria-label="Gram fiyatı" autocomplete="off"></div>
         <button class="go ikincil" type="button" id="i-guncel" title="Güncel piyasa fiyatını doldur">güncel</button>
         <button class="go" type="submit">Ekle</button>
-        <div class="ipucu" id="i-ipucu"></div>
+        <div class="ipucu" id="i-ipucu" aria-live="polite"></div>
       </form>
     </div>
   </section>
@@ -596,7 +597,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "04.11 22:04";
+const SURUM = "04.11 22:15";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -1507,47 +1508,104 @@ setInterval(() => { if (!document.hidden && document.documentElement.dataset.app
    çünkü elimizdeki fiyat 999.9 gram fiyatıdır. Brüt gramı kullanmak portföyü %9,1 şişirirdi.
    Ağırlıklar 1951 tarihli TBMM Kararı No.1738: sikke (Ata) birliği 7,21657 gr, ziynet birliği 7,016 gr;
    ikisi de 22 ayar (916,6 milyem). Piyasada "tam/yarım/çeyrek" ziynet serisidir, "Ata" ayrı kote edilir. */
+const AYAR22 = 22 / 24;                    // 916,6 milyem
+const ZIYNET = 7.016, SIKKE = 7.21657;     // birlik (tam) brüt ağırlıkları
 const CINSLER = {
-  gram:   {ad:"Gram altın",   kisa:"gram",   gram:1,      brut:1,       ayar:"999.9 · 24 ayar"},
-  ceyrek: {ad:"Çeyrek altın", kisa:"çeyrek", gram:1.6078, brut:1.754,   ayar:"22 ayar"},
-  yarim:  {ad:"Yarım altın",  kisa:"yarım",  gram:3.2157, brut:3.508,   ayar:"22 ayar"},
-  tam:    {ad:"Tam altın",    kisa:"tam",    gram:6.4313, brut:7.016,   ayar:"22 ayar"},
-  ata:    {ad:"Ata lirası",   kisa:"ata",    gram:6.6152, brut:7.21657, ayar:"22 ayar"}
+  gram:   {ad:"Gram altın",   kisa:"gram",   brut:1,          ayar:"999.9 · 24 ayar"},
+  ceyrek: {ad:"Çeyrek altın", kisa:"çeyrek", brut:ZIYNET/4,   ayar:"22 ayar"},
+  yarim:  {ad:"Yarım altın",  kisa:"yarım",  brut:ZIYNET/2,   ayar:"22 ayar"},
+  tam:    {ad:"Tam altın",    kisa:"tam",    brut:ZIYNET,     ayar:"22 ayar"},
+  ata:    {ad:"Ata lirası",   kisa:"ata",    brut:SIKKE,      ayar:"22 ayar"}
 };
+/* Saf gram tek kaynaktan türetilir; elle yazılsaydı 4 çeyrek ile 1 tam birbirini tutmazdı. */
+Object.entries(CINSLER).forEach(([k, C]) => { C.gram = k === "gram" ? 1 : C.brut * AYAR22; });
 const cinsAl = k => CINSLER[k] || CINSLER.gram;
 const ondalik = (v, b = 2) => (+v).toLocaleString("tr-TR", {maximumFractionDigits: b});
+const TOZ = 1e-4;                          // bu gramın altı "bitti" sayılır (yuvarlama artığı)
 
-/* Elde ne var: cins bazında net adet (alım − satım). Gram kayıtları "gram" kovasında toplanır. */
-function eldeDokum(){
-  const say = {};
-  canli(islemler).forEach(i => {
-    const c = i.cins || "gram", yon = i.tur === "satim" ? -1 : 1;
-    const m = i.cins ? (+i.adet || 0) : (+i.gram || 0);
-    say[c] = (say[c] || 0) + yon * m;
-  });
-  return Object.entries(say).filter(([, v]) => v > 1e-6)
-    .map(([c, v]) => c === "gram" ? `${ondalik(v, 3)} gr külçe` : `${ondalik(v, 2)} ${cinsAl(c).kisa}`);
+/* Türkçe klavyede ondalık ayracı virgüldür. Alanlar metin olduğu için ham metni biz çözüyoruz:
+   "11.126,93" ve "11126.93" aynı sayıya gider; anlamsız girdi NaN döner ve kayıt reddedilir. */
+function sayiOku(ham){
+  const t = String(ham ?? "").trim().replace(/\s/g, "");
+  if (!t) return NaN;
+  const d = t.includes(",") ? t.replace(/\./g, "").replace(",", ".") : t;
+  return /^\d+(\.\d+)?$/.test(d) ? +d : NaN;
+}
+
+/* Sarrafiye kotasyonu ne kadar eski (saat). Besleme kesilirse son bilinen değer
+   süresiz "canlı" görünmesin diye her kullanımda yaşına bakılır. */
+const SARRAFIYE_OMRU = 24;
+function sarrafiyeKot(cinsKod){
+  const s = sarrafiye && sarrafiye[cinsKod];
+  if (!s || !sarrafiye.zaman) return null;
+  const yas = (Date.now() - new Date(sarrafiye.zaman)) / 36e5;
+  return yas >= 0 && yas < SARRAFIYE_OMRU ? s : null;
 }
 
 /* Bir adedin (ya da gram altında bir gramın) güncel piyasa fiyatı.
-   Sarrafiye beslemesi varsa onu kullanır, yoksa 999.9 gram fiyatından saf altın karşılığıyla tahmin eder. */
+   Taze sarrafiye kotasyonu varsa onu kullanır, yoksa 999.9 gram fiyatından tahmin eder. */
 function guncelBirim(cinsKod, tur){
-  const C = cinsAl(cinsKod), s = sarrafiye && sarrafiye[cinsKod];
+  const C = cinsAl(cinsKod), s = sarrafiyeKot(cinsKod);
   const alirken = tur !== "satim";
   if (s && (alirken ? s.satis : s.alis)) return {v: alirken ? s.satis : s.alis, tahmin: false};
   if (!fiyat) return {v: 0, tahmin: false};
-  /* Sarrafiye kotasyonu yoksa 999.9 gram fiyatindan saf altin karsiligiyla tahmin: primi icermez. */
+  /* Kotasyon yoksa 999.9 gram fiyatından saf altın karşılığıyla tahmin: sarrafiye primini içermez. */
   return {v: (alirken ? fiyat.satis : fiyat.alis) * C.gram, tahmin: cinsKod !== "gram"};
 }
 
+/* Bir lotun bugünkü bozdurma değeri. Sikkenin kendi alış kotasyonu varsa o kullanılır:
+   sikke eritme değerinin üstünde işlem görür, gram fiyatıyla değerlemek zarar gösterirdi. */
+function lotDeger(l){
+  const s = l.cins ? sarrafiyeKot(l.cins) : null;
+  if (s && s.alis && l.adet) return l.adet * s.alis;
+  return l.gram * (fiyat?.alis || 0);
+}
+
+/* Elde ne var: lotlardan türetilir, böylece gösterilen döküm toplam gramla her zaman tutarlıdır. */
+function eldeDokum(lot){
+  const say = {};
+  lot.forEach(l => {
+    const c = l.cins || "gram";
+    say[c] = (say[c] || 0) + (l.cins ? l.adet : l.gram);
+  });
+  return Object.entries(say).filter(([, v]) => v > TOZ)
+    .map(([c, v]) => c === "gram" ? `${ondalik(v, 3)} gr külçe` : `${ondalik(v, 2)} ${cinsAl(c).kisa}`);
+}
+
+let sonCins = null;
 function cinsUyarla(){
-  const cins = document.getElementById("i-cins").value, C = cinsAl(cins), sikke = cins !== "gram";
+  const cins = document.getElementById("i-cins").value, sikke = cins !== "gram";
   const mik = document.getElementById("i-mik"), fi = document.getElementById("i-fiyat");
   mik.placeholder = sikke ? "Adet" : "Gram";
-  mik.step = sikke ? "1" : "0.01";
-  mik.min  = sikke ? "1" : "0.01";
+  mik.setAttribute("aria-label", sikke ? "Adet" : "Gram");
   fi.placeholder = sikke ? "Adet fiyatı (TL)" : "Gram fiyatı (TL)";
+  fi.setAttribute("aria-label", sikke ? "Adet fiyatı" : "Gram fiyatı");
+  /* Cins değişince fiyat alanı kalırsa gram fiyatı adet fiyatı diye kaydedilebilir: temizle. */
+  if (sonCins !== null && sonCins !== cins) fi.value = "";
+  sonCins = cins;
   ipucuYaz();
+}
+
+let formHata = "";                         // Ekle'ye basınca çıkan uyarı; kullanıcı yazmaya başlayınca silinir
+/* Girdiyi tek yerden doğrula; hem ipucu satırı hem Ekle aynı kuralı kullansın. */
+function girdiHatasi(cins, mikHam, fiyHam, tur){
+  const sikke = cins !== "gram";
+  if (!document.getElementById("i-tarih").value) return "Tarih seç.";
+  if (mikHam) {
+    const a = sayiOku(mikHam);
+    if (!(a > 0)) return `${sikke ? "Adet" : "Gram"} sayı olmalı. Ondalık için virgül kullan: 1,5`;
+    if (sikke && Math.abs(a - Math.round(a)) > 1e-9) return "Sikke adedi tam sayı olmalı.";
+  }
+  if (fiyHam && !(sayiOku(fiyHam) > 0)) return "Fiyat sayı olmalı. Ondalık için virgül kullan: 11.126,93";
+  if (mikHam && fiyHam && tur === "satim") {
+    const a = sayiOku(mikHam);
+    if (a > 0) {
+      const satilan = a * cinsAl(cins).gram, elde = eldeki;
+      if (satilan > elde + TOZ)
+        return `Elinde ${ondalik(elde, 4)} gram var, bu satış ${ondalik(satilan, 4)} gram. Fazlası kaydedilemez.`;
+    }
+  }
+  return "";
 }
 
 function ipucuYaz(){
@@ -1555,8 +1613,9 @@ function ipucuYaz(){
   if (!el) return;
   const cins = document.getElementById("i-cins").value, C = cinsAl(cins), sikke = cins !== "gram";
   const tur = document.getElementById("i-tur").value;
-  const adet = +document.getElementById("i-mik").value || 0;
-  const bir  = +document.getElementById("i-fiyat").value || 0;
+  const mikHam = document.getElementById("i-mik").value.trim();
+  const fiyHam = document.getElementById("i-fiyat").value.trim();
+  const adet = sayiOku(mikHam), bir = sayiOku(fiyHam);
   const g = guncelBirim(cins, tur);
   const satir = [];
 
@@ -1567,7 +1626,9 @@ function ipucuYaz(){
     + (g.tahmin ? ` · 999.9 gram fiyatından tahmin, sarrafiye primi hariç`
                 : ` <span class="ok">· canlı IAR fiyatı</span>`));
 
-  if (adet && bir) {
+  const hata = girdiHatasi(cins, mikHam, fiyHam, tur) || formHata;
+  if (hata) satir.push(`<span class="yanlis">${hata}</span>`);
+  else if (adet > 0 && bir > 0) {
     const gram = adet * C.gram, toplam = adet * bir;
     satir.push(`Bu kayıt: <b>${ondalik(adet, 2)} ${sikke ? "adet" : "gram"}</b> = ${ondalik(gram, 4)} gr saf altın · toplam <b>${tl(toplam)}</b> · gram maliyeti ${tl(toplam / gram)}`);
   }
@@ -1578,12 +1639,19 @@ function lotlar(){
   const lot = [];
   [...canli(islemler)].sort((a,b) => a.tarih < b.tarih ? -1 : 1).forEach(i => {
     if (i.tur === "satim") {
-      const top = lot.reduce((a,l) => a + l.gram, 0), oran = top ? 1 - i.gram/top : 0;
-      lot.forEach(l => { l.gram *= oran; l.maliyet *= oran; });
-    } else lot.push({tarih: i.tarih, gram: +i.gram, maliyet: i.gram * i.birim_fiyat_tl});
+      /* Ortalama maliyet: satış bütün lotları aynı oranda kırpar.
+         Oran 0 ile 1 arasına sıkıştırılır — elde olandan fazla satılırsa lotlar eksiye düşer
+         ve sonraki satış oranı 1'in üstüne çıkarıp portföyü BÜYÜTÜRDÜ. */
+      const top = lot.reduce((a,l) => a + l.gram, 0);
+      const oran = top > 0 ? Math.max(0, 1 - i.gram/top) : 0;
+      lot.forEach(l => { l.gram *= oran; l.maliyet *= oran; l.adet *= oran; });
+    } else lot.push({tarih: i.tarih, gram: +i.gram, maliyet: i.gram * i.birim_fiyat_tl,
+                     cins: i.cins && i.cins !== "gram" ? i.cins : null, adet: +i.adet || 0});
   });
-  return lot.filter(l => l.gram > 1e-9);
+  return lot.filter(l => l.gram > TOZ);
 }
+/* Elde kaç gram saf altın var (satış girilirken üst sınır). aRender her çizimde tazeler. */
+let eldeki = 0;
 const gunSatiri = t => { const a = gecmis.filter(g => g.t <= t); return a.length ? a[a.length-1] : gecmis[0]; };
 function enfCarpani(bas, bit){
   let c = 1, d = new Date(bas+"T00:00:00"); const son = Object.keys(enflasyon).sort().pop(), bitD = new Date(bit+"T00:00:00");
@@ -1597,7 +1665,9 @@ function enfCarpani(bas, bit){
 }
 function aHesap(){
   const lot = lotlar(), gram = lot.reduce((a,l) => a+l.gram, 0), maliyet = lot.reduce((a,l) => a+l.maliyet, 0);
-  const deger = gram * (fiyat?.alis || 0), kz = deger - maliyet;
+  /* Değer lot lot hesaplanır: sikkenin kendi alış kotasyonu varsa o, yoksa gram fiyatı. */
+  const deger = lot.reduce((a,l) => a + lotDeger(l), 0), kz = deger - maliyet;
+  const sikkeli = lot.some(l => l.cins && sarrafiyeKot(l.cins));
   let mUsd = 0, enf = 0, ons = 0, kur = 0;
   lot.forEach(l => {
     const s0 = gunSatiri(l.tarih);
@@ -1607,10 +1677,11 @@ function aHesap(){
     ons += l.maliyet*(a-1)*(1+b)/2; kur += l.maliyet*(b-1)*(1+a)/2;
   });
   return {gram, maliyet, deger, kz, ort: gram?maliyet/gram:0, yuzde: maliyet?kz/maliyet*100:0,
-          mUsd, enf, ons, kur, makas: kz - ons - kur};
+          mUsd, enf, ons, kur, makas: kz - ons - kur, lot, sikkeli};
 }
 function aRender(){
   const d = aHesap(), yon = d.kz >= 0 ? "up" : "down";
+  eldeki = d.gram;                         // satis girisinde ust sinir
   document.getElementById("kz").className = "kz " + yon;
   document.getElementById("kz").textContent = d.gram ? (d.kz>=0?"▲ ":"▼ ") + tl(d.kz, true) : "—";
   document.getElementById("pct").className = "pct " + yon;
@@ -1626,14 +1697,15 @@ function aRender(){
          <path d="M${nokta.join(" L")} L${W2},${H2} L0,${H2} Z" fill="var(--acc-soft)"></path>
          <path d="M${nokta.join(" L")}" fill="none" stroke="var(--acc)" stroke-width="1.6" opacity=".55"></path></svg>`);
   }
-  const dokum = eldeDokum();
+  const dokum = eldeDokum(d.lot);
   document.getElementById("a-alt").textContent = d.gram
     ? `${ondalik(d.gram, 4)} gram saf altın` + (dokum.length ? ` · ${dokum.join(" + ")}` : "")
       + ` · ortalama maliyet ${tl(d.ort)} / gram`
     : "Aşağıdan ilk alımını ekle.";
   const kzUsd = fiyat && d.gram ? d.deger/fiyat.kur - d.mUsd : 0, reel = d.enf ? (d.deger/d.enf - 1)*100 : 0;
   document.getElementById("a-tiles").innerHTML = [
-    {k:"Güncel değer", v: d.gram?tl(d.deger):"—", s: fiyat?`${d.gram} gr × ${tl(fiyat.alis)}`:""},
+    {k:"Güncel değer", v: d.gram?tl(d.deger):"—",
+     s: !fiyat ? "" : d.sikkeli ? "sikkeler kendi alış fiyatından" : `${ondalik(d.gram, 4)} gr × ${tl(fiyat.alis)}`},
     {k:"Maliyet", v: d.gram?tl(d.maliyet):"—", s: d.gram?`ort. ${tl(d.ort)} / gr`:""},
     {k:"Dolar bazında", v: d.gram?usdF(kzUsd,true):"—", s: fiyat?`kur ${fiyat.kur.toFixed(2).replace(".",",")}`:"", c: kzUsd>=0?"up":"down"},
     {k:"Reel getiri", v: d.enf?yzd(reel):"—", s:"enflasyondan arındırılmış", c: reel>=0?"up":"down"},
@@ -1756,23 +1828,30 @@ document.getElementById("islem-form").addEventListener("submit", e => {
   e.preventDefault();
   const tarih = document.getElementById("i-tarih").value;
   const cins = document.getElementById("i-cins").value, C = cinsAl(cins);
-  const adet = +document.getElementById("i-mik").value, birim = +document.getElementById("i-fiyat").value;
-  if (!tarih || !adet || !birim) return;
+  const tur = document.getElementById("i-tur").value;
+  const mikHam = document.getElementById("i-mik").value.trim();
+  const fiyHam = document.getElementById("i-fiyat").value.trim();
+  const adet = sayiOku(mikHam), birim = sayiOku(fiyHam);
+  formHata = girdiHatasi(cins, mikHam, fiyHam, tur)
+          || (!mikHam ? `${cins === "gram" ? "Gram" : "Adet"} gir.` : "")
+          || (!fiyHam ? "Fiyat gir." : "");
+  if (formHata) { ipucuYaz(); document.getElementById("i-ipucu").scrollIntoView({block:"nearest"}); return; }
   /* Kayıt her zaman gram ve gram fiyatı üzerinden tutulur — bütün hesap (lotlar, aHesap, python raporları)
      bu iki alana dayanıyor. Sikkede gram = adet × saf gram karşılığı, gram fiyatı = ödenen toplam / gram. */
   const gram = +(adet * C.gram).toFixed(4), toplam = adet * birim;
-  const k = {id: yeniKimlik(), tarih, tur: document.getElementById("i-tur").value,
-             gram, birim_fiyat_tl: +(toplam / gram).toFixed(4)};
+  const k = {id: yeniKimlik(), tarih, tur, gram, birim_fiyat_tl: +(toplam / gram).toFixed(4)};
   if (cins !== "gram") { k.cins = cins; k.adet = adet; k.adet_fiyat_tl = birim; }
   islemler.push({...k, g: simdi()}); kaydet("a_islemler", islemler); senkYaz("islemler");
   document.getElementById("i-mik").value = ""; document.getElementById("i-fiyat").value = "";
-  ipucuYaz();
+  formHata = ""; ipucuYaz();
   aRender();
 });
-document.getElementById("i-cins").addEventListener("change", cinsUyarla);
-document.getElementById("i-tur").addEventListener("change", ipucuYaz);
-document.getElementById("i-mik").addEventListener("input", ipucuYaz);
-document.getElementById("i-fiyat").addEventListener("input", ipucuYaz);
+const hatayiSil = () => { formHata = ""; ipucuYaz(); };
+document.getElementById("i-cins").addEventListener("change", () => { formHata = ""; cinsUyarla(); });
+document.getElementById("i-tur").addEventListener("change", hatayiSil);
+document.getElementById("i-mik").addEventListener("input", hatayiSil);
+document.getElementById("i-fiyat").addEventListener("input", hatayiSil);
+document.getElementById("i-tarih").addEventListener("change", hatayiSil);
 document.getElementById("i-guncel").addEventListener("click", () => {
   const g = guncelBirim(document.getElementById("i-cins").value, document.getElementById("i-tur").value);
   if (!g.v) return;
