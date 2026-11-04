@@ -9,6 +9,16 @@ from datetime import datetime, timedelta, timezone
 TR = timezone(timedelta(hours=3))
 SITE = "https://www.iarplatform.com/"
 API = "https://tstapi.iarplatform.com/api/ForInvest/GetAll?groupId=1"
+SARRAFIYE_API = "https://tstapi.iarplatform.com/api/ForInvest/GetAll?groupId=13"   # Ziynet grubu
+
+# Uygulamadaki cins anahtari -> IAR kodunun sadelestirilmis hali (ilk bulunan kullanilir).
+# "Yeni" basim once denenir; piyasada standart kotasyon odur.
+CINS_KODLARI = {
+    "ceyrek": ["YENI CEYREK", "ESKI CEYREK"],
+    "yarim":  ["YENI YARIM", "ESKI YARIM"],
+    "tam":    ["YENI TAM", "ESKI TAM"],
+    "ata":    ["YENI ATA", "ESKI ATA"],
+}
 KLASOR = os.path.dirname(os.path.abspath(__file__))
 CTX = ssl.create_default_context()
 CTX.check_hostname = False
@@ -47,10 +57,50 @@ def anahtar():
     raise RuntimeError("Erisim anahtari sitede bulunamadi")
 
 
-veri = json.loads(cek(API, {"X-Api-Key": anahtar()}))
+gizli = anahtar()
+veri = json.loads(cek(API, {"X-Api-Key": gizli}))
 bul = lambda kod: next(x for x in veri if x.get("code") == kod)
 kg, ons, kur = bul("ALTIN KG/TRY"), bul("ALTIN ONS/USD"), bul("USD/TRY")
 simdi = datetime.now(TR)
+
+
+def sadelestir(s):
+    """Kod adini eslestirilebilir hale getirir: 'YENİ ÇEYREK' -> 'YENI CEYREK'."""
+    cev = str.maketrans("ÇĞİIÖŞÜçğıiöşü", "CGIIOSUCGIIOSU")
+    return re.sub(r"[^A-Z0-9]+", " ", str(s).translate(cev).upper()).strip()
+
+
+def sarrafiye_cek():
+    """Ziynet grubundan (groupId=13) tam/yarim/ceyrek/ata fiyatlarini adet basina TL olarak alir.
+
+    Kod adlari degisirse eslesme bos doner; o zaman sarrafiye alani hic yazilmaz ve
+    uygulama gram fiyatindan tahmine duser. Eslesmeyen durumda butun kodlar loga basilir.
+    """
+    try:
+        ham = json.loads(cek(SARRAFIYE_API, {"X-Api-Key": gizli}))
+    except Exception as e:
+        print("sarrafiye alinamadi:", e)
+        return None
+    esleme = {x.get("code"): x for x in ham}
+    sade = {sadelestir(k): v for k, v in esleme.items()}
+    out = {}
+    for anahtar_ad, adaylar in CINS_KODLARI.items():
+        for aday in adaylar:
+            kayit = sade.get(aday)
+            if kayit and kayit.get("bidPrice") and kayit.get("askPrice"):
+                out[anahtar_ad] = {"alis": round(kayit["bidPrice"], 2),
+                                   "satis": round(kayit["askPrice"], 2), "kod": kayit.get("code")}
+                break
+    if not out:
+        print("sarrafiye eslesmedi · gelen kodlar:", sorted(sade))
+        return None
+    eksik = [k for k in CINS_KODLARI if k not in out]
+    if eksik:
+        print("sarrafiyede eslesmeyen cins:", eksik, "· gelen kodlar:", sorted(sade))
+    out["zaman"] = simdi.isoformat(timespec="seconds")
+    out["kaynak"] = "IAR Platform · Ziynet"
+    return out
+
 
 fiyat = {
     "alis": round(kg["bidPrice"] / 1000, 2),      # IAR'in senden aldigi (bozdurma)
@@ -60,6 +110,9 @@ fiyat = {
     "zaman": simdi.isoformat(timespec="seconds"),
     "kaynak": "IAR Platform · ALTIN KG/TRY",
 }
+sarrafiye = sarrafiye_cek()
+if sarrafiye:
+    fiyat["sarrafiye"] = sarrafiye
 with open(os.path.join(KLASOR, "fiyat.json"), "w", encoding="utf-8") as f:
     json.dump(fiyat, f, ensure_ascii=False, indent=1)
 

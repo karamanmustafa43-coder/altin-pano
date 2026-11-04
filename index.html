@@ -216,9 +216,13 @@
   table.islem{width:100%;border-collapse:collapse;font-size:13.5px}
   table.islem th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:4px 6px;font-weight:600}
   table.islem td{padding:9px 6px;border-top:1px solid var(--line)}
-  table.islem td.num{text-align:right;font-family:"IBM Plex Mono",monospace}
+  table.islem td.num{text-align:right;font-family:"IBM Plex Mono",monospace;white-space:nowrap}
   .tur{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--acc-soft);color:var(--acc-ink)}
   .tur.satim{background:var(--down-soft);color:var(--down)}
+  table.islem td .ek{font-size:11px;color:var(--muted);font-weight:400;margin-top:2px;white-space:nowrap}
+  .ipucu{flex:1 1 100%;font-size:11.5px;color:var(--muted);line-height:1.55;margin-top:-1px}
+  .ipucu b{color:var(--ink-2);font-weight:600}
+  .ipucu .ok{color:var(--acc-ink)}
 
   form{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
   input,select,textarea,button{font:inherit;color:inherit}
@@ -228,6 +232,7 @@
   button.go{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:10px 18px;font-weight:600;cursor:pointer}
   button.go.big{padding:12px 22px;font-size:16px;border-radius:12px}
   button.go.stop{background:var(--down)}
+  button.go.ikincil{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line);padding:10px 14px;font-weight:500}
   .quick{display:flex;gap:6px;flex-wrap:wrap}
   .quick button{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:7px 13px;
     font-size:13px;font-weight:600;cursor:pointer;color:var(--ink-2);transition:transform .12s ease, background .15s ease}
@@ -499,9 +504,18 @@
       <form id="islem-form">
         <div class="f-s"><input type="date" id="i-tarih" aria-label="Tarih" required></div>
         <div class="f-s"><select id="i-tur" aria-label="Tür"><option value="alim">Alım</option><option value="satim">Satım</option></select></div>
-        <div class="f"><input type="number" id="i-gram" step="0.01" min="0.01" placeholder="Gram" required></div>
-        <div class="f"><input type="number" id="i-fiyat" step="0.01" min="1" placeholder="Gram fiyatı (TL)" required></div>
+        <div class="f-s"><select id="i-cins" aria-label="Cins">
+          <option value="gram">Gram altın</option>
+          <option value="ceyrek">Çeyrek altın</option>
+          <option value="yarim">Yarım altın</option>
+          <option value="tam">Tam altın</option>
+          <option value="ata">Ata lirası</option>
+        </select></div>
+        <div class="f"><input type="number" id="i-mik" step="0.01" min="0.01" placeholder="Gram" aria-label="Miktar" required></div>
+        <div class="f"><input type="number" id="i-fiyat" step="0.01" min="1" placeholder="Gram fiyatı (TL)" aria-label="Fiyat" required></div>
+        <button class="go ikincil" type="button" id="i-guncel" title="Güncel piyasa fiyatını doldur">güncel</button>
         <button class="go" type="submit">Ekle</button>
+        <div class="ipucu" id="i-ipucu"></div>
       </form>
     </div>
   </section>
@@ -582,7 +596,7 @@
 
 <script>
 /* ===== ortak ===== */
-const SURUM = "20.10 21:48";
+const SURUM = "04.11 22:04";
 const AY = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const GUN = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
 const GUNU = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
@@ -797,7 +811,7 @@ async function senkOku(){
 let gorevler = yukle("m_gorevler", []), calisma = yukle("m_calisma", []), notlar = yukle("m_notlar", []);
 let hedefDk = yukle("m_hedef", 600), prog = yukle("m_prog", null), takvim = yukle("m_takvim", []);
 let islemler = yukle("a_islemler", []), gecmis = yukle("a_gecmis", []), enflasyon = yukle("a_enflasyon", {});
-let fiyat = yukle("a_fiyat", null), aralik = 7, sayac = null, tik = null;
+let fiyat = yukle("a_fiyat", null), sarrafiye = yukle("a_sarrafiye", null), aralik = 7, sayac = null, tik = null;
 
 /* baglantidaki #v=... ilk kurulum: veri sunucuya gitmez */
 const tohumlanan = new Set();
@@ -1489,6 +1503,77 @@ document.getElementById("n-yenile").addEventListener("click", async e => {
 setInterval(() => { if (!document.hidden && document.documentElement.dataset.app === "namaz") nRender(); }, 30000);
 
 /* ===== ALTIN ===== */
+/* Sarrafiye cinsleri. `gram` = sikkenin içindeki 24 ayar (999.9) altın karşılığı; portföy bununla değerlenir,
+   çünkü elimizdeki fiyat 999.9 gram fiyatıdır. Brüt gramı kullanmak portföyü %9,1 şişirirdi.
+   Ağırlıklar 1951 tarihli TBMM Kararı No.1738: sikke (Ata) birliği 7,21657 gr, ziynet birliği 7,016 gr;
+   ikisi de 22 ayar (916,6 milyem). Piyasada "tam/yarım/çeyrek" ziynet serisidir, "Ata" ayrı kote edilir. */
+const CINSLER = {
+  gram:   {ad:"Gram altın",   kisa:"gram",   gram:1,      brut:1,       ayar:"999.9 · 24 ayar"},
+  ceyrek: {ad:"Çeyrek altın", kisa:"çeyrek", gram:1.6078, brut:1.754,   ayar:"22 ayar"},
+  yarim:  {ad:"Yarım altın",  kisa:"yarım",  gram:3.2157, brut:3.508,   ayar:"22 ayar"},
+  tam:    {ad:"Tam altın",    kisa:"tam",    gram:6.4313, brut:7.016,   ayar:"22 ayar"},
+  ata:    {ad:"Ata lirası",   kisa:"ata",    gram:6.6152, brut:7.21657, ayar:"22 ayar"}
+};
+const cinsAl = k => CINSLER[k] || CINSLER.gram;
+const ondalik = (v, b = 2) => (+v).toLocaleString("tr-TR", {maximumFractionDigits: b});
+
+/* Elde ne var: cins bazında net adet (alım − satım). Gram kayıtları "gram" kovasında toplanır. */
+function eldeDokum(){
+  const say = {};
+  canli(islemler).forEach(i => {
+    const c = i.cins || "gram", yon = i.tur === "satim" ? -1 : 1;
+    const m = i.cins ? (+i.adet || 0) : (+i.gram || 0);
+    say[c] = (say[c] || 0) + yon * m;
+  });
+  return Object.entries(say).filter(([, v]) => v > 1e-6)
+    .map(([c, v]) => c === "gram" ? `${ondalik(v, 3)} gr külçe` : `${ondalik(v, 2)} ${cinsAl(c).kisa}`);
+}
+
+/* Bir adedin (ya da gram altında bir gramın) güncel piyasa fiyatı.
+   Sarrafiye beslemesi varsa onu kullanır, yoksa 999.9 gram fiyatından saf altın karşılığıyla tahmin eder. */
+function guncelBirim(cinsKod, tur){
+  const C = cinsAl(cinsKod), s = sarrafiye && sarrafiye[cinsKod];
+  const alirken = tur !== "satim";
+  if (s && (alirken ? s.satis : s.alis)) return {v: alirken ? s.satis : s.alis, tahmin: false};
+  if (!fiyat) return {v: 0, tahmin: false};
+  /* Sarrafiye kotasyonu yoksa 999.9 gram fiyatindan saf altin karsiligiyla tahmin: primi icermez. */
+  return {v: (alirken ? fiyat.satis : fiyat.alis) * C.gram, tahmin: cinsKod !== "gram"};
+}
+
+function cinsUyarla(){
+  const cins = document.getElementById("i-cins").value, C = cinsAl(cins), sikke = cins !== "gram";
+  const mik = document.getElementById("i-mik"), fi = document.getElementById("i-fiyat");
+  mik.placeholder = sikke ? "Adet" : "Gram";
+  mik.step = sikke ? "1" : "0.01";
+  mik.min  = sikke ? "1" : "0.01";
+  fi.placeholder = sikke ? "Adet fiyatı (TL)" : "Gram fiyatı (TL)";
+  ipucuYaz();
+}
+
+function ipucuYaz(){
+  const el = document.getElementById("i-ipucu");
+  if (!el) return;
+  const cins = document.getElementById("i-cins").value, C = cinsAl(cins), sikke = cins !== "gram";
+  const tur = document.getElementById("i-tur").value;
+  const adet = +document.getElementById("i-mik").value || 0;
+  const bir  = +document.getElementById("i-fiyat").value || 0;
+  const g = guncelBirim(cins, tur);
+  const satir = [];
+
+  if (sikke) satir.push(`<b>${C.ad}</b> · ${ondalik(C.brut, 3)} gr brüt, ${C.ayar} → portföye <b>${ondalik(C.gram, 4)} gr</b> saf altın olarak işlenir.`);
+  else satir.push(`<b>Gram altın</b> · ${C.ayar}, birebir işlenir.`);
+
+  if (g.v) satir.push(`Güncel ${tur === "satim" ? "alış" : "satış"}: <b>${tl(g.v)}</b> / ${sikke ? "adet" : "gram"}`
+    + (g.tahmin ? ` · 999.9 gram fiyatından tahmin, sarrafiye primi hariç`
+                : ` <span class="ok">· canlı IAR fiyatı</span>`));
+
+  if (adet && bir) {
+    const gram = adet * C.gram, toplam = adet * bir;
+    satir.push(`Bu kayıt: <b>${ondalik(adet, 2)} ${sikke ? "adet" : "gram"}</b> = ${ondalik(gram, 4)} gr saf altın · toplam <b>${tl(toplam)}</b> · gram maliyeti ${tl(toplam / gram)}`);
+  }
+  el.innerHTML = satir.join("<br>");
+}
+
 function lotlar(){
   const lot = [];
   [...canli(islemler)].sort((a,b) => a.tarih < b.tarih ? -1 : 1).forEach(i => {
@@ -1541,8 +1626,11 @@ function aRender(){
          <path d="M${nokta.join(" L")} L${W2},${H2} L0,${H2} Z" fill="var(--acc-soft)"></path>
          <path d="M${nokta.join(" L")}" fill="none" stroke="var(--acc)" stroke-width="1.6" opacity=".55"></path></svg>`);
   }
+  const dokum = eldeDokum();
   document.getElementById("a-alt").textContent = d.gram
-    ? `${d.gram.toLocaleString("tr-TR")} gram · ortalama maliyet ${tl(d.ort)} / gram` : "Aşağıdan ilk alımını ekle.";
+    ? `${ondalik(d.gram, 4)} gram saf altın` + (dokum.length ? ` · ${dokum.join(" + ")}` : "")
+      + ` · ortalama maliyet ${tl(d.ort)} / gram`
+    : "Aşağıdan ilk alımını ekle.";
   const kzUsd = fiyat && d.gram ? d.deger/fiyat.kur - d.mUsd : 0, reel = d.enf ? (d.deger/d.enf - 1)*100 : 0;
   document.getElementById("a-tiles").innerHTML = [
     {k:"Güncel değer", v: d.gram?tl(d.deger):"—", s: fiyat?`${d.gram} gr × ${tl(fiyat.alis)}`:""},
@@ -1574,8 +1662,12 @@ function aRender(){
   const liste = [...canli(islemler)].sort((a,b) => a.tarih < b.tarih ? 1 : -1);
   document.getElementById("islem-meta").textContent = liste.length ? liste.length + " işlem" : "";
   document.getElementById("islemler").innerHTML = liste.length ? liste.map((i,ix) => `<tr>
-    <td>${kisaT(i.tarih)}</td><td><span class="tur ${i.tur==="satim"?"satim":""}">${i.tur==="satim"?"Satım":"Alım"}</span></td>
-    <td class="num">${(+i.gram).toLocaleString("tr-TR")}</td><td class="num">${tl(i.birim_fiyat_tl)}</td>
+    <td>${kisaT(i.tarih)}</td>
+    <td><span class="tur ${i.tur==="satim"?"satim":""}">${i.tur==="satim"?"Satım":"Alım"}</span>${
+      i.cins && i.cins !== "gram" ? `<div class="ek">${ondalik(i.adet, 2)} × ${cinsAl(i.cins).kisa}</div>` : ""}</td>
+    <td class="num">${ondalik(+i.gram, 4)}</td>
+    <td class="num">${tl(i.adet_fiyat_tl ?? i.birim_fiyat_tl)}${
+      i.cins && i.cins !== "gram" ? `<div class="ek">${binlik(i.birim_fiyat_tl)} / gr</div>` : ""}</td>
     <td style="text-align:right"><button class="x" data-isil="${esc(i.id ?? ix)}" aria-label="Sil">×</button></td></tr>`).join("")
     : `<tr><td colspan="5" class="empty">Henüz işlem yok.</td></tr>`;
 }
@@ -1610,6 +1702,8 @@ async function fiyatCek(){
     if (!d.alis || !d.ons || !d.kur) throw new Error("eksik veri");
     fiyat = {alis:d.alis, satis:d.satis, ons:d.ons, kur:d.kur, zaman:d.zaman};
     kaydet("a_fiyat", fiyat);
+    if (d.sarrafiye) { sarrafiye = d.sarrafiye; kaydet("a_sarrafiye", sarrafiye); }   // yoksa son bilineni koru
+    ipucuYaz();
     const satir = {t: bugunIso, a: d.alis, o: d.ons, k: d.kur, s: "IAR"};
     const son = gecmis[gecmis.length-1];
     if (son && son.t === bugunIso) gecmis[gecmis.length-1] = satir; else gecmis.push(satir);
@@ -1660,13 +1754,30 @@ document.getElementById("m-yenile").addEventListener("click", async e => {
 });
 document.getElementById("islem-form").addEventListener("submit", e => {
   e.preventDefault();
-  const k = {id: Date.now().toString(36), tarih: document.getElementById("i-tarih").value,
-             tur: document.getElementById("i-tur").value, gram: +document.getElementById("i-gram").value,
-             birim_fiyat_tl: +document.getElementById("i-fiyat").value};
-  if (!k.tarih || !k.gram || !k.birim_fiyat_tl) return;
+  const tarih = document.getElementById("i-tarih").value;
+  const cins = document.getElementById("i-cins").value, C = cinsAl(cins);
+  const adet = +document.getElementById("i-mik").value, birim = +document.getElementById("i-fiyat").value;
+  if (!tarih || !adet || !birim) return;
+  /* Kayıt her zaman gram ve gram fiyatı üzerinden tutulur — bütün hesap (lotlar, aHesap, python raporları)
+     bu iki alana dayanıyor. Sikkede gram = adet × saf gram karşılığı, gram fiyatı = ödenen toplam / gram. */
+  const gram = +(adet * C.gram).toFixed(4), toplam = adet * birim;
+  const k = {id: yeniKimlik(), tarih, tur: document.getElementById("i-tur").value,
+             gram, birim_fiyat_tl: +(toplam / gram).toFixed(4)};
+  if (cins !== "gram") { k.cins = cins; k.adet = adet; k.adet_fiyat_tl = birim; }
   islemler.push({...k, g: simdi()}); kaydet("a_islemler", islemler); senkYaz("islemler");
-  document.getElementById("i-gram").value = ""; document.getElementById("i-fiyat").value = "";
+  document.getElementById("i-mik").value = ""; document.getElementById("i-fiyat").value = "";
+  ipucuYaz();
   aRender();
+});
+document.getElementById("i-cins").addEventListener("change", cinsUyarla);
+document.getElementById("i-tur").addEventListener("change", ipucuYaz);
+document.getElementById("i-mik").addEventListener("input", ipucuYaz);
+document.getElementById("i-fiyat").addEventListener("input", ipucuYaz);
+document.getElementById("i-guncel").addEventListener("click", () => {
+  const g = guncelBirim(document.getElementById("i-cins").value, document.getElementById("i-tur").value);
+  if (!g.v) return;
+  document.getElementById("i-fiyat").value = g.v.toFixed(2);
+  ipucuYaz();
 });
 document.getElementById("islemler").addEventListener("click", e => {
   const s = e.target.closest("[data-isil]");
@@ -1687,6 +1798,7 @@ if (sayac) { document.getElementById("c-ders").value = sayac.ders || ""; rozetle
 sayacYaz();
 mRender();
 aRender();
+cinsUyarla();
 document.getElementById("surum").textContent = "sürüm " + SURUM;
 
 /* yeni surum varsa kendini tazele; onbellek inat ederse elle dugme goster */
