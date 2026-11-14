@@ -3,7 +3,7 @@
  "satis": 6361.16,
  "ons": 3880.34,
  "kur": 50.4175,
- "zaman": "2026-11-14T01:23:24+03:00",
+ "zaman": "2026-11-14T05:35:51+03:00",
  "kaynak": "IAR Platform · ALTIN KG/TRY",
  "sarrafiye": {
   "ceyrek": {
@@ -26,7 +26,7 @@
    "satis": 43281.19,
    "kod": "YENİ ATA"
   },
-  "zaman": "2026-11-14T01:23:24+03:00",
+  "zaman": "2026-11-14T05:35:51+03:00",
   "kaynak": "IAR Platform · Ziynet"
  }
 }
