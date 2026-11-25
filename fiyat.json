@@ -1,32 +1,32 @@
 {
- "alis": 5980.26,
- "satis": 6042.52,
- "ons": 3532.01,
- "kur": 50.868,
- "zaman": "2026-11-25T12:14:17+03:00",
+ "alis": 6040.34,
+ "satis": 6167.01,
+ "ons": 3548.36,
+ "kur": 50.908,
+ "zaman": "2026-11-25T22:21:15+03:00",
  "kaynak": "IAR Platform · ALTIN KG/TRY",
  "sarrafiye": {
   "ceyrek": {
-   "alis": 9867.68,
-   "satis": 10209.06,
+   "alis": 9968.49,
+   "satis": 10420.92,
    "kod": "YENİ ÇEYREK"
   },
   "yarim": {
-   "alis": 19735.36,
-   "satis": 20327.52,
+   "alis": 19936.99,
+   "satis": 20749.34,
    "kod": "YENİ YARIM"
   },
   "tam": {
-   "alis": 39470.71,
-   "satis": 40443.6,
+   "alis": 39873.97,
+   "satis": 41282.87,
    "kod": "YENİ TAM"
   },
   "ata": {
-   "alis": 40128.56,
-   "satis": 41138.3,
+   "alis": 40538.54,
+   "satis": 41991.99,
    "kod": "YENİ ATA"
   },
-  "zaman": "2026-11-25T12:14:17+03:00",
+  "zaman": "2026-11-25T22:21:15+03:00",
   "kaynak": "IAR Platform · Ziynet"
  }
 }
